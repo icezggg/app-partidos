@@ -1,22 +1,12 @@
-body { 
-    font-family: 'Inter', sans-serif; 
-    /* Fondo de Drive con transparencia reducida */
-    background-image: linear-gradient(rgba(10, 10, 10, 0.65), rgba(10, 10, 10, 0.85)), url('https://drive.google.com/thumbnail?id=169nJb-bbiYADJ59xiVNBkzvi_AijSSpg&sz=w1920'); 
-    background-size: cover; 
-    background-attachment: fixed;
-    background-position: center;
-    position: relative;
-}
-
+body { font-family: 'Inter', sans-serif; background-image: linear-gradient(rgba(10, 10, 10, 0.65), rgba(10, 10, 10, 0.85)), url('https://drive.google.com/thumbnail?id=169nJb-bbiYADJ59xiVNBkzvi_AijSSpg&sz=w1920'); background-size: cover; background-attachment: fixed; background-position: center; }
 .font-display { font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
 .glass { background: rgba(20, 20, 20, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
-.neon-glow { box-shadow: 0 0 15px rgba(74, 222, 128, 0.4); }
+.neon-glow { box-shadow: 0 0 15px rgba(8, 16, 89, 0.6); } /* Azul TecSports */
 
-.sidebar-link { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; font-weight: 600; transition: all 0.2s; color: #9ca3af; }
+.sidebar-link { padding: 10px 16px; border-radius: 10px; font-weight: 600; transition: all 0.2s; color: #9ca3af; font-size: 1rem; cursor: pointer; background: none; border: none; }
 .sidebar-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
-.sidebar-link.active { background: rgba(74, 222, 128, 0.1); color: #00ff87; border-left: 4px solid #00ff87; padding-left: 16px; }
+.sidebar-link.active { background: rgba(8, 16, 89, 0.3); color: #60a5fa; border-left: 4px solid #081059; }
 
-/* CANCHA CSS CON ÁREAS Y ARCO */
 .pitch { background: radial-gradient(circle at center, #1a3a1a 0%, #0f1f0f 100%); position: relative; border: 2px solid rgba(255,255,255,0.3); overflow: hidden; }
 .pitch-line-center { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(255,255,255,0.3); }
 .pitch-circle-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; }
@@ -24,26 +14,25 @@ body {
 .pitch-box-right { position: absolute; right: 0; top: 25%; height: 50%; width: 15%; border: 2px solid rgba(255,255,255,0.3); border-right: none; }
 .pitch-goal-left { position: absolute; left: 0; top: 40%; height: 20%; width: 3%; border: 2px solid rgba(255,255,255,0.3); border-left: none; }
 .pitch-goal-right { position: absolute; right: 0; top: 40%; height: 20%; width: 3%; border: 2px solid rgba(255,255,255,0.3); border-right: none; }
-
 .player-pin { transition: all 0.3s ease; cursor: pointer; transform: translate(-50%, -50%); position: absolute; }
 .player-pin:hover { transform: translate(-50%, -50%) scale(1.2); z-index: 10; }
 
-.card-bronze { background: linear-gradient(135deg, #5a3a1a 0%, #3a2410 100%); border: 2px solid #cd7f32; box-shadow: 0 0 15px rgba(205, 127, 50, 0.3); }
-.card-silver { background: linear-gradient(135deg, #3a3a3a 0%, #242424 100%); border: 2px solid #c0c0c0; box-shadow: 0 0 15px rgba(192, 192, 192, 0.3); }
-.card-gold { background: linear-gradient(135deg, #3a3a1a 0%, #24240f 100%); border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); }
-.card-toty { background: linear-gradient(135deg, #1a1a3a 0%, #0f0f24 100%); border: 2px solid #60a5fa; box-shadow: 0 0 20px rgba(96, 165, 250, 0.6); }
+.card-bronze { background: linear-gradient(135deg, #5a3a1a 0%, #3a2410 100%); border: 2px solid #cd7f32; }
+.card-silver { background: linear-gradient(135deg, #3a3a3a 0%, #242424 100%); border: 2px solid #c0c0c0; }
+.card-gold { background: linear-gradient(135deg, #3a3a1a 0%, #24240f 100%); border: 2px solid #fbbf24; }
+.card-toty { background: linear-gradient(135deg, #1a1a3a 0%, #0f0f24 100%); border: 2px solid #60a5fa; }
 
 #loader { position: fixed; inset: 0; background: #0a0a0a; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #00ff87; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+.spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #60a5fa; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); } ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
 .btn-back { background: rgba(255,255,255,0.05); padding: 10px 20px; border-radius: 8px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
 .btn-back:hover { background: rgba(255,255,255,0.1); }
 
 .admin-card { background: rgba(20, 20, 20, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
-.admin-card:hover { border-color: rgba(74, 222, 128, 0.5); box-shadow: 0 0 15px rgba(74, 222, 128, 0.1); transform: translateY(-2px); }
-.admin-card h3 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.admin-card p { font-size: 0.875rem; color: #6b7280; }
+.admin-card:hover { border-color: rgba(96, 165, 250, 0.5); transform: translateY(-2px); }
+
+.stat-record { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 16px; }
+.drawer-open { transform: translateX(0) !important; }
+.gen-player { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
