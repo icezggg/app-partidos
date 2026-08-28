@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partidos Aura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-gray-100 min-h-screen">
+
+    <div id="loader">
+        <div class="spinner mb-4"></div>
+        <p class="text-gray-500 font-bold tracking-widest uppercase">Cargando Liga Aura...</p>
+    </div>
+
+    <div class="flex min-h-screen" style="display:none;" id="app-body">
+        <aside class="hidden md:flex flex-col w-72 glass border-r border-white/5 p-6 fixed h-full z-50">
+            <h1 onclick="showView('home')" class="text-5xl font-black text-green-400 mb-10 font-display cursor-pointer hover:text-green-300 transition">AURA 🔥</h1>
+            <nav class="flex flex-col gap-4 flex-grow">
+                <a href="#" onclick="showView('home')" class="sidebar-link active text-2xl font-display tracking-wide">🏠 INICIO</a>
+                <a href="#" onclick="showView('players')" class="sidebar-link text-2xl font-display tracking-wide">👥 JUGADORES</a>
+                <a href="#" onclick="showView('seasons')" class="sidebar-link text-2xl font-display tracking-wide">🏆 TEMPORADAS</a>
+                <a href="#" onclick="showView('duels')" class="sidebar-link text-2xl font-display tracking-wide">⚔️ DUELOS</a>
+            </nav>
+            <div class="pt-4">
+                <a href="#" onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200 text-lg font-semibold">⚙️ Panel Admin</a>
+            </div>
+        </aside>
+
+        <main class="flex-grow md:ml-72 pb-20 md:pb-0 w-full">
+            <header class="md:hidden glass sticky top-0 z-40 p-4 flex justify-between items-center border-b border-white/5">
+                <h1 onclick="showView('home')" class="text-2xl font-black text-green-400 font-display cursor-pointer">AURA 🔥</h1>
+                <button class="text-gray-400 text-xl" onclick="checkAdmin()">⚙️</button>
+            </header>
+            <div id="app-view" class="p-4 md:p-8 max-w-6xl mx-auto"></div>
+        </main>
+    </div>
+
+    <nav class="md:hidden fixed bottom-0 w-full glass border-t border-white/5 flex justify-around py-3 z-50" id="mobile-nav" style="display:none;">
+        <button onclick="showView('home')" class="flex flex-col items-center text-green-400 text-xs font-bold">🏠 Inicio</button>
+        <button onclick="showView('players')" class="flex flex-col items-center text-gray-500 text-xs">👥 Plantel</button>
+        <button onclick="showView('seasons')" class="flex flex-col items-center text-gray-500 text-xs">🏆 Temp</button>
+        <button onclick="showView('duels')" class="flex flex-col items-center text-gray-500 text-xs">⚔️ Duelos</button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
