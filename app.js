@@ -170,7 +170,7 @@ function showView(view, param = null) {
                     html += `
                         <div class="player-pin flex flex-col items-center" style="left: ${x}%; top: ${y}%;" onclick="alert('${p.Jugador}\\nGoles: ${p.Goles}\\nNota: ${p.Nota}')">
                             <div class="w-10 h-10 md:w-14 md:h-14 rounded-full ${teamNum === 1 ? 'bg-green-500/20 border-green-400' : 'bg-blue-500/20 border-blue-400'} border-2 flex items-center justify-center text-xs md:text-sm font-black text-white backdrop-blur ${isMvp ? 'ring-4 ring-yellow-400 border-yellow-400' : ''}">${pos}</div>
-                            <span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white">${p.Jugador.split(' ')[0]}</span>
+                            <span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white">${p.Jugador}</span>
                         </div>
                     `;
                 });
