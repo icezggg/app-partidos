@@ -42,12 +42,13 @@ const formatDate = (dateStr) => {
 
 const getPitchX = (posStr, team) => {
     const pos = String(posStr || 'DC').toUpperCase();
-    let x = team === 1 ? 15 : 85;
+    // Equipo 1 defiende izquierda (0-50%), Equipo 2 defiende derecha (50-100%)
+    let x = team === 1 ? 25 : 75;
     if(pos.includes('GK')) x = team === 1 ? 5 : 95;
-    else if(pos.includes('DF')) x = team === 1 ? 25 : 75;
-    else if(pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) x = team === 1 ? 45 : 55;
-    else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 50 : 50;
-    else if(pos.includes('DC')) x = team === 1 ? 70 : 30;
+    else if(pos.includes('DF')) x = team === 1 ? 15 : 85;
+    else if(pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) x = team === 1 ? 30 : 70;
+    else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 35 : 65;
+    else if(pos.includes('DC')) x = team === 1 ? 42 : 58; // Los DC quedan al borde del mediocampo
     return x;
 };
 
