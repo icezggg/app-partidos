@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Partidos Aura</title>
+    <title>TecSports</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -12,38 +12,54 @@
 
     <div id="loader">
         <div class="spinner mb-4"></div>
-        <p class="text-gray-500 font-bold tracking-widest uppercase">Cargando Liga Aura...</p>
+        <p class="text-gray-500 font-bold tracking-widest uppercase">Cargando TecSports...</p>
     </div>
 
-    <div class="flex min-h-screen" style="display:none;" id="app-body">
-        <aside class="hidden md:flex flex-col w-72 glass border-r border-white/5 p-6 fixed h-full z-50">
-            <h1 onclick="showView('home')" class="text-5xl font-black text-green-400 mb-10 font-display cursor-pointer hover:text-green-300 transition">AURA 🔥</h1>
-            <nav class="flex flex-col gap-4 flex-grow">
-                <a href="#" onclick="showView('home')" class="sidebar-link active text-2xl font-display tracking-wide">🏠 INICIO</a>
-                <a href="#" onclick="showView('players')" class="sidebar-link text-2xl font-display tracking-wide">👥 JUGADORES</a>
-                <a href="#" onclick="showView('seasons')" class="sidebar-link text-2xl font-display tracking-wide">🏆 TEMPORADAS</a>
-                <a href="#" onclick="showView('duels')" class="sidebar-link text-2xl font-display tracking-wide">⚔️ DUELOS</a>
+    <div style="display:none;" id="app-body">
+        <header class="glass sticky top-0 z-50 w-full border-b border-white/5">
+            <nav class="flex justify-between items-center p-4 max-w-7xl mx-auto">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleDrawer()" class="md:hidden text-2xl text-gray-300">☰</button>
+                    <img onclick="showView('home')" class="app-logo h-12 md:h-16 w-auto cursor-pointer object-contain" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
+                </div>
+                <div class="hidden md:flex items-center gap-1">
+                    <a href="#" onclick="showView('home')" class="sidebar-link active">Inicio</a>
+                    <a href="#" onclick="showView('players')" class="sidebar-link">Jugadores</a>
+                    <a href="#" onclick="showView('seasons')" class="sidebar-link">Temporadas</a>
+                    <a href="#" onclick="showView('duels')" class="sidebar-link">Duelos</a>
+                    <div class="relative group">
+                        <button class="sidebar-link">Generador ▾</button>
+                        <div class="absolute hidden group-hover:block bg-gray-900 rounded-xl p-2 mt-1 right-0 w-56 border border-white/10 z-50">
+                            <a href="#" onclick="showView('cardGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">🃏 Generador de Carta</a>
+                            <a href="#" onclick="showView('teamGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">⚽ Generador de Equipos</a>
+                        </div>
+                    </div>
+                    <button onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200">⚙️ Admin</button>
+                </div>
+                <button onclick="checkAdmin()" class="md:hidden text-gray-400 text-xl">⚙️</button>
             </nav>
-            <div class="pt-4">
-                <a href="#" onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200 text-lg font-semibold">⚙️ Panel Admin</a>
-            </div>
-        </aside>
+        </header>
 
-        <main class="flex-grow md:ml-72 pb-20 md:pb-0 w-full">
-            <header class="md:hidden glass sticky top-0 z-40 p-4 flex justify-between items-center border-b border-white/5">
-                <h1 onclick="showView('home')" class="text-2xl font-black text-green-400 font-display cursor-pointer">AURA 🔥</h1>
-                <button class="text-gray-400 text-xl" onclick="checkAdmin()">⚙️</button>
-            </header>
-            <div id="app-view" class="p-4 md:p-8 max-w-6xl mx-auto"></div>
+        <div id="drawer-backdrop" onclick="toggleDrawer()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+        <div id="drawer" class="fixed top-0 left-0 h-full w-64 bg-gray-900 z-50 transform -translate-x-full transition-transform md:hidden">
+            <div class="p-6 border-b border-white/10">
+                <img class="app-logo h-10 w-auto" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
+            </div>
+            <nav class="p-4 flex flex-col gap-2">
+                <a href="#" onclick="toggleDrawer(); showView('home')" class="sidebar-link">🏠 Inicio</a>
+                <a href="#" onclick="toggleDrawer(); showView('players')" class="sidebar-link">👥 Jugadores</a>
+                <a href="#" onclick="toggleDrawer(); showView('seasons')" class="sidebar-link">🏆 Temporadas</a>
+                <a href="#" onclick="toggleDrawer(); showView('duels')" class="sidebar-link">⚔️ Duelos</a>
+                <hr class="border-white/10 my-2">
+                <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link">🃏 Gen. Carta</a>
+                <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link">⚽ Gen. Equipos</a>
+            </nav>
+        </div>
+
+        <main class="pb-10 w-full">
+            <div id="app-view" class="p-4 md:p-8 max-w-7xl mx-auto"></div>
         </main>
     </div>
-
-    <nav class="md:hidden fixed bottom-0 w-full glass border-t border-white/5 flex justify-around py-3 z-50" id="mobile-nav" style="display:none;">
-        <button onclick="showView('home')" class="flex flex-col items-center text-green-400 text-xs font-bold">🏠 Inicio</button>
-        <button onclick="showView('players')" class="flex flex-col items-center text-gray-500 text-xs">👥 Plantel</button>
-        <button onclick="showView('seasons')" class="flex flex-col items-center text-gray-500 text-xs">🏆 Temp</button>
-        <button onclick="showView('duels')" class="flex flex-col items-center text-gray-500 text-xs">⚔️ Duelos</button>
-    </nav>
 
     <script src="app.js"></script>
 </body>
