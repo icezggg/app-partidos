@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TecSports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=8">
+</head>
+<body class="text-gray-100 min-h-screen">
+
+    <div id="loader">
+        <div class="spinner mb-4"></div>
+        <p class="text-gray-500 font-bold tracking-widest uppercase">Cargando TecSports...</p>
+    </div>
+
+    <div style="display:none;" id="app-body">
+        <header class="glass sticky top-0 z-50 w-full border-b border-white/5">
+            <nav class="flex justify-between items-center p-4 max-w-7xl mx-auto">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleDrawer()" class="md:hidden text-2xl text-gray-300">☰</button>
+                    <img onclick="showView('home')" class="app-logo h-16 md:h-20 w-auto cursor-pointer object-contain" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
+                </div>
+                <div class="hidden md:flex items-center gap-1">
+                    <a href="#" onclick="showView('home')" class="sidebar-link active">Inicio</a>
+                    <a href="#" onclick="showView('players')" class="sidebar-link">Jugadores</a>
+                    <a href="#" onclick="showView('seasons')" class="sidebar-link">Temporadas</a>
+                    <a href="#" onclick="showView('duels')" class="sidebar-link">Duelos</a>
+                    <div class="relative group">
+                        <button class="sidebar-link">Generador ▾</button>
+                        <div class="absolute hidden group-hover:block bg-gray-900 rounded-xl p-2 mt-1 right-0 w-56 border border-white/10 z-50">
+                            <a href="#" onclick="showView('cardGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">🃏 Generador de Carta</a>
+                            <a href="#" onclick="showView('teamGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">⚽ Generador de Equipos</a>
+                        </div>
+                    </div>
+                    <button onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200">⚙️ Admin</button>
+                </div>
+                <button onclick="checkAdmin()" class="md:hidden text-gray-400 text-xl">⚙️</button>
+            </nav>
+        </header>
+
+        <div id="drawer-backdrop" onclick="toggleDrawer()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+        <div id="drawer" class="fixed top-0 left-0 h-full w-64 bg-gray-900 z-50 transform -translate-x-full transition-transform md:hidden">
+            <div class="p-6 border-b border-white/10">
+                <img class="app-logo h-10 w-auto" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
+            </div>
+            <nav class="p-4 flex flex-col gap-2">
+                <a href="#" onclick="toggleDrawer(); showView('home')" class="sidebar-link">🏠 Inicio</a>
+                <a href="#" onclick="toggleDrawer(); showView('players')" class="sidebar-link">👥 Jugadores</a>
+                <a href="#" onclick="toggleDrawer(); showView('seasons')" class="sidebar-link">🏆 Temporadas</a>
+                <a href="#" onclick="toggleDrawer(); showView('duels')" class="sidebar-link">⚔️ Duelos</a>
+                <hr class="border-white/10 my-2">
+                <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link">🃏 Gen. Carta</a>
+                <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link">⚽ Gen. Equipos</a>
+            </nav>
+        </div>
+
+        <main class="pb-10 w-full">
+            <div id="app-view" class="p-4 md:p-8 max-w-7xl mx-auto"></div>
+        </main>
+    </div>
+
+    <script src="app.js?v=8"></script>
+</body>
+</html>
