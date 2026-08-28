@@ -7,6 +7,7 @@ let currentDuelSeason = 'hist';
 let duelP1 = null;
 let duelP2 = null;
 let adminSection = 'menu';
+let adminPassword = null;
 
 let adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] };
 
@@ -519,7 +520,7 @@ async function saveNewPlayer() {
     if(!nombre || !pos) return alert("Falta nombre o posición");
     
     try {
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: nombre, Posicion: pos, FotoId: fotoId }) });
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: nombre, Posicion: pos, FotoId: fotoId, Password: adminPassword }) });
         alert("Jugador añadido!");
         await loadData();
         setAdminSection('menu');
@@ -531,7 +532,7 @@ async function deleteMatch() {
     if(!confirm("Seguro que querés borrar este partido?")) return;
     
     try {
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: matchId }) });
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: matchId, Password: adminPassword }) });
         alert("Partido eliminado!");
         await loadData();
         setAdminSection('menu');
@@ -544,7 +545,7 @@ async function savePhoto() {
     if(!fotoId) return alert("Pegá el ID de la foto");
     
     try {
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: nombre, FotoId: fotoId }) });
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: nombre, FotoId: fotoId, Password: adminPassword }) });
         alert("Foto guardada!");
         await loadData();
         setAdminSection('menu');
@@ -573,7 +574,7 @@ async function saveMatch() {
     if(adminMatch.Detalle.length === 0) return alert("Agregá al menos un jugador.");
 
     try {
-        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: 'saveMatch', ...adminMatch}) });
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: 'saveMatch', ...adminMatch, Password: adminPassword}) });
         const data = await res.json();
         if(data.status === 'success') {
             alert("Partido guardado!");
@@ -588,7 +589,25 @@ function changeProfileSeason(playerName, season) { currentProfileSeason = season
 function updateDuel(playerNum, name) { if(playerNum === 1) duelP1 = DB['HISTORICA'].find(p => p.JUGADOR === name); else duelP2 = DB['HISTORICA'].find(p => p.JUGADOR === name); showView('duels'); }
 function changeSeason(temp) { currentSeason = temp; showView('seasons'); }
 function changeDuelSeason(temp) { currentDuelSeason = temp; showView('duels'); }
-function checkAdmin() { const pass = prompt("Clave Admin:"); if(pass === "712") { adminSection='menu'; showView('admin'); } else if(pass !== null) alert("Incorrecta."); }
+async function checkAdmin() {
+    const pass = prompt("Ingrese clave de Administrador:");
+    if(!pass) return;
+    
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'checkAdmin', Password: pass }) });
+        const data = await res.json();
+        
+        if(data.status === 'success' && data.isAdmin === true) {
+            adminPassword = pass; // Guardamos la contraseña en memoria
+            adminSection = 'menu';
+            showView('admin');
+        } else {
+            alert("Clave incorrecta.");
+        }
+    } catch(e) {
+        alert("Error de conexión.");
+    }
+}
 
 function renderDuel() {
     const tempData = currentDuelSeason === 't1' ? DB['TEMP 1'] : currentDuelSeason === 't2' ? DB['TEMP 2'] : DB['HISTORICA'];
