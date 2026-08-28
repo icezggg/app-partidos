@@ -27,11 +27,14 @@
                     <a href="#" onclick="showView('players')" class="sidebar-link">Jugadores</a>
                     <a href="#" onclick="showView('seasons')" class="sidebar-link">Temporadas</a>
                     <a href="#" onclick="showView('duels')" class="sidebar-link">Duelos</a>
-                    <div class="relative group">
+
+                                        <div class="relative group">
                         <button class="sidebar-link">Generador ▾</button>
-                        <div class="absolute hidden group-hover:block bg-gray-900 rounded-xl p-2 mt-1 right-0 w-56 border border-white/10 z-50">
-                            <a href="#" onclick="showView('cardGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">🃏 Generador de Carta</a>
-                            <a href="#" onclick="showView('teamGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">⚽ Generador de Equipos</a>
+                        <div class="absolute hidden group-hover:block top-full right-0 w-56 pt-1 z-50">
+                            <div class="bg-gray-900 rounded-xl p-2 border border-white/10">
+                                <a href="#" onclick="showView('cardGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">🃏 Generador de Carta</a>
+                                <a href="#" onclick="showView('teamGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">⚽ Generador de Equipos</a>
+                            </div>
                         </div>
                     </div>
                     <button onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200">⚙️ Admin</button>
