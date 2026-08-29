@@ -23,13 +23,12 @@
                     <img onclick="showView('home')" class="app-logo h-16 md:h-20 w-auto cursor-pointer object-contain" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
                 </div>
                 <div class="hidden md:flex items-center gap-1">
-                    <a href="#" onclick="showView('home')" class="sidebar-link active">Inicio</a>
-                    <a href="#" onclick="showView('players')" class="sidebar-link">Jugadores</a>
-                    <a href="#" onclick="showView('seasons')" class="sidebar-link">Temporadas</a>
-                    <a href="#" onclick="showView('duels')" class="sidebar-link">Duelos</a>
-
-                                        <div class="relative group">
-                        <button class="sidebar-link">Generador ▾</button>
+                    <a href="#" onclick="showView('home')" class="sidebar-link font-display tracking-wide text-lg uppercase">Inicio</a>
+                    <a href="#" onclick="showView('players')" class="sidebar-link font-display tracking-wide text-lg uppercase">Jugadores</a>
+                    <a href="#" onclick="showView('seasons')" class="sidebar-link font-display tracking-wide text-lg uppercase">Temporadas</a>
+                    <a href="#" onclick="showView('duels')" class="sidebar-link font-display tracking-wide text-lg uppercase">Duelos</a>
+                    <div class="relative group">
+                        <button class="sidebar-link font-display tracking-wide text-lg uppercase">Generador ▾</button>
                         <div class="absolute hidden group-hover:block top-full right-0 w-56 pt-1 z-50">
                             <div class="bg-gray-900 rounded-xl p-2 border border-white/10">
                                 <a href="#" onclick="showView('cardGen')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">🃏 Generador de Carta</a>
@@ -37,7 +36,7 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="checkAdmin()" class="sidebar-link text-gray-400 hover:text-gray-200">⚙️ Admin</button>
+                    <button onclick="checkAdmin()" class="sidebar-link font-display tracking-wide text-lg uppercase text-gray-400 hover:text-gray-200">Admin</button>
                 </div>
                 <button onclick="checkAdmin()" class="md:hidden text-gray-400 text-xl">⚙️</button>
             </nav>
