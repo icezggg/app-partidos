@@ -36,3 +36,45 @@ body { font-family: 'Inter', sans-serif; background-image: linear-gradient(rgba(
 .stat-record { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 16px; }
 .drawer-open { transform: translateX(0) !important; }
 .gen-player { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
+
+/* EFECTOS PARA EL NUEVO INICIO */
+.glow-blue { box-shadow: 0 0 25px rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.2); }
+.glow-yellow { box-shadow: 0 0 25px rgba(250, 204, 21, 0.3); border: 1px solid rgba(250, 204, 21, 0.2); }
+.glow-cyan { box-shadow: 0 0 25px rgba(34, 211, 238, 0.3); border: 1px solid rgba(34, 211, 238, 0.2); }
+
+.last-match-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.last-match-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(8px) brightness(0.3);
+    z-index: 0;
+    transform: scale(1.1);
+}
+.last-match-content {
+    position: relative;
+    z-index: 10;
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+}
+
+/* EFECTO ULTIMO PARTIDO */
+.last-match-card { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s; }
+.last-match-card:hover { transform: translateY(-2px); }
+.last-match-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(6px) brightness(0.35); z-index: 0; transform: scale(1.1); }
+.last-match-card::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 1; }
+.last-match-content { position: relative; z-index: 10; padding: 24px; }
