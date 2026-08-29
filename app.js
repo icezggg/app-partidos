@@ -268,24 +268,38 @@ function showView(view, param = null) {
                             <span class="text-xs font-bold uppercase tracking-widest text-gray-300 bg-black/50 px-2 py-1 rounded">${formatDate(lastMatch.Fecha)}</span>
                         </div>
 
-         <div id="drawer" class="fixed inset-0 z-50 transform -translate-x-full transition-transform duration-300 md:hidden glass-dark flex flex-col">
-            <div class="flex justify-between items-center p-6 border-b border-white/10">
-                <img class="app-logo h-10 w-auto" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
-                <button onclick="toggleDrawer()" class="text-4xl text-gray-300 hover:text-white transition">&times;</button>
-            </div>
-            <nav class="flex-grow p-8 flex flex-col gap-6">
-                <a href="#" onclick="toggleDrawer(); showView('home')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🏠 Inicio</a>
-                <a href="#" onclick="toggleDrawer(); showView('players')" class="sidebar-link text-2xl font-display tracking-wide uppercase">👥 Jugadores</a>
-                <a href="#" onclick="toggleDrawer(); showView('seasons')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🏆 Temporadas</a>
-                <a href="#" onclick="toggleDrawer(); showView('duels')" class="sidebar-link text-2xl font-display tracking-wide uppercase">⚔️ Duelos</a>
-                <hr class="border-white/10 my-4">
-                <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🃏 Gen. Carta</a>
-                <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">⚽ Gen. Equipos</a>
-            </nav>
-            <div class="p-8 border-t border-white/10">
-                <button onclick="toggleDrawer(); checkAdmin()" class="sidebar-link text-xl text-gray-400 hover:text-white transition uppercase font-display tracking-wide">⚙️ Admin</button>
-            </div>
-        </div>
+                        <!-- Medio: 3 Columnas (Alineados arriba) -->
+                        <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-6">
+                            <!-- IZQ: Equipo 1 -->
+                            <div class="flex flex-col items-center">
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
+                                <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
+                            </div>
+
+                            <!-- CENTRO: Resultado Enmarcado y MVP -->
+                            <div class="flex flex-col items-center">
+                                <div class="bg-black/60 border border-white/10 rounded-xl md:rounded-2xl px-3 md:px-6 py-2 md:py-4 mb-6 md:mb-8">
+                                    <div class="flex items-center gap-2 md:gap-6">
+                                        <span class="text-5xl md:text-8xl font-black text-blue-400 drop-shadow-lg">${lastMatch.Goles_E1}</span>
+                                        <span class="text-2xl md:text-4xl text-gray-500">-</span>
+                                        <span class="text-5xl md:text-8xl font-black text-red-400 drop-shadow-lg">${lastMatch.Goles_E2}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- MVP más abajo y con etiqueta -->
+                                <div class="flex flex-col items-center mt-2 md:mt-4">
+                                    <img src="${getPhoto(lastMatch.MVP)}" class="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-2 shadow-lg shadow-yellow-500/20">
+                                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
+                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP}</p>
+                                </div>
+                            </div>
+
+                            <!-- DER: Equipo 2 -->
+                            <div class="flex flex-col items-center">
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
+                                <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
+                            </div>
+                        </div>
 
                         <!-- Abajo: Estadio -->
                         <div class="text-right mt-4">
