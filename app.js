@@ -21,18 +21,37 @@ function getSeasonData(seasonKey) {
     return DB['HISTORICA'] || [];
 }
 
-const generateFifaStats = (ovr, posStr) => {
-    const pos = String(posStr || 'DC').toUpperCase();
-    const base = ovr > 0 ? ovr : 50;
-    const variance = () => Math.floor(Math.random() * 20) - 10;
-    const stat = (v) => Math.max(10, Math.min(99, base + v));
-    let b = [0,0,0,0,0,0]; 
-    if (pos.includes('GK')) b = [-10, -20, -20, -20, 10, -10];
-    else if (pos.includes('DF')) b = [5, -20, -10, -10, 15, 10];
-    else if (pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) b = [0, 5, 10, 5, 0, 0];
-    else if (pos.includes('W') || pos.includes('LW') || pos.includes('RW')) b = [15, 5, 0, 10, -20, -10];
-    else if (pos.includes('DC')) b = [0, 15, -10, 0, -20, 15];
-    return [stat(b[0]+variance()), stat(b[1]+variance()), stat(b[2]+variance()), stat(b[3]+variance()), stat(b[4]+variance()), stat(b[5]+variance())];
+const generateFifaStats = (p) => {
+    const pj = Math.max(1, n(p.PARTIDOS));
+    const victorias = n(p.VICTORIAS);
+    const goles = n(p.GOLES);
+    const mvps = n(p["MVP'S"]);
+    const promedio = n(p.PROMEDIO);
+    
+    const wr = victorias / pj; 
+    const ratio = goles / pj; 
+    const wrFactor = wr > 1 ? (wr / 100) : wr;
+    
+    const calc = (val, min, max) => Math.min(max, Math.max(min, Math.round(val)));
+
+    // MODIFICADORES SEGÚN POSICIÓN [RIT, TIR, PAS, REG, DEF, FIS]
+    const pos = String(p.POSICION || 'DC').toUpperCase();
+    let mod = [0, 0, 0, 0, 0, 0];
+    if (pos.includes('GK')) mod = [-10, -30, -10, -20, 15, 0];
+    else if (pos.includes('DF')) mod = [-5, -15, -5, -10, 15, 10];
+    else if (pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) mod = [0, 0, 10, 5, 0, 0];
+    else if (pos.includes('W') || pos.includes('LW') || pos.includes('RW')) mod = [10, 0, 0, 10, -15, -5];
+    else if (pos.includes('DC')) mod = [0, 10, -5, 5, -20, 10];
+
+    // TUS FÓRMULAS CON LOS MODIFICADORES APLICADOS
+    const rit = calc(45 + (promedio * 3) + (wrFactor * 10) + ((mvps / pj) * 15) + mod[0], 50, 99);
+    const tir = calc(40 + (ratio * 22) + ((mvps / pj) * 12) + (promedio * 1.5) + mod[1], 50, 99);
+    const pas = calc(42 + (promedio * 3.5) + (wrFactor * 12) + mod[2], 50, 99);
+    const reg = calc(42 + (promedio * 3) + ((mvps / pj) * 20) + (ratio * 5) + mod[3], 50, 99);
+    const def = calc(50 + (promedio * 3.5) + (wrFactor * 10) - (ratio * 12) + mod[4], 40, 99);
+    const fis = calc(45 + (promedio * 3.2) + (wrFactor * 10) + (pj * 0.6) + (mvps * 1.2) + mod[5], 50, 99);
+    
+    return [rit, tir, pas, reg, def, fis];
 };
 
 const formatDate = (dateStr) => {
@@ -324,8 +343,21 @@ function showView(view, param = null) {
         `;
     }
     else if(view === 'players') {
-        const histData = DB['HISTORICA'] || [];
-        app.innerHTML = `<h1 class="text-5xl font-black text-white uppercase mb-1">Plantel</h1><p class="text-gray-500 mb-6">Toca un jugador para ver su perfil completo</p><div class="grid grid-cols-2 md:grid-cols-4 gap-4">${histData.map(p => `<div onclick="showView('playerProfile', '${p.JUGADOR}')" class="glass p-4 rounded-2xl text-center hover:border-blue-500/50 transition cursor-pointer flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 ${n(p.OVERALL)>=94 ? 'border-cyan-400' : n(p.OVERALL)>=75 ? 'border-yellow-400' : n(p.OVERALL)>=68 ? 'border-gray-300' : 'border-orange-700'}"><img src="${getPhoto(p.JUGADOR)}" alt="${p.JUGADOR}" class="w-full h-full object-cover"></div><h3 class="font-bold text-white text-sm">${p.JUGADOR}</h3><div class="mt-2 flex items-center gap-2"><span class="font-black text-xl ${getOvrColor(n(p.OVERALL))}">${n(p.OVERALL)}</span><span class="text-sm font-bold text-gray-500 bg-gray-800 px-2 py-0.5 rounded">${p.POSICION}</span></div></div>`).join('')}</div>`;
+        app.innerHTML = `
+            <h1 class="text-5xl font-black text-white uppercase mb-1">Plantel</h1>
+            <p class="text-gray-500 mb-6">Toca un jugador para ver su perfil completo</p>
+            
+            <!-- BARRA DE BÚSQUEDA -->
+            <div class="glass p-4 rounded-xl mb-8 flex items-center gap-3">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="search-players-input" oninput="filterPlayers(this.value)" placeholder="Buscar jugador..." class="bg-transparent text-white w-full outline-none text-lg">
+            </div>
+
+            <!-- CONTENEDOR DE LA GRILLA -->
+            <div id="players-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                ${renderPlayersGrid('')}
+            </div>
+        `;
     }
     else if(view === 'playerProfile') {
         const hist = DB['HISTORICA'].find(j => j.JUGADOR === param);
@@ -484,6 +516,33 @@ function showView(view, param = null) {
     }
     else if(view === 'admin') { renderAdmin(); }
     window.scrollTo(0, 0);
+}
+// Genera el HTML de la grilla de jugadores según la búsqueda
+function renderPlayersGrid(query = '') {
+    const histData = DB['HISTORICA'] || [];
+    const filteredData = histData.filter(p => String(p.JUGADOR).toLowerCase().includes(query.toLowerCase()));
+    
+    if (filteredData.length === 0) {
+        return '<p class="text-gray-500 text-center col-span-4 mt-10">No se encontraron jugadores con ese nombre...</p>';
+    }
+
+    return filteredData.map(p => `
+        <div onclick="showView('playerProfile', '${p.JUGADOR}')" class="glass p-4 rounded-2xl text-center hover:border-blue-500/50 transition cursor-pointer flex flex-col items-center justify-center">
+            <div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 ${n(p.OVERALL)>=94 ? 'border-cyan-400' : n(p.OVERALL)>=75 ? 'border-yellow-400' : n(p.OVERALL)>=68 ? 'border-gray-300' : 'border-orange-700'}">
+                <img src="${getPhoto(p.JUGADOR)}" alt="${p.JUGADOR}" class="w-full h-full object-cover">
+            </div>
+            <h3 class="font-bold text-white text-sm">${p.JUGADOR}</h3>
+            <div class="mt-2 flex items-center gap-2">
+                <span class="font-black text-xl ${getOvrColor(n(p.OVERALL))}">${n(p.OVERALL)}</span>
+                <span class="text-sm font-bold text-gray-500 bg-gray-800 px-2 py-0.5 rounded">${p.POSICION}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Se ejecuta cada vez que escribis una letra en el buscador
+function filterPlayers(query) {
+    document.getElementById('players-grid').innerHTML = renderPlayersGrid(query);
 }
 
 
