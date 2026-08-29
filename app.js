@@ -7,7 +7,12 @@ let adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '',
 let teamGenPlayers = [];
 let cardGenData = { name: '', ovr: 75, pos: 'DC', stats: { rit: 75, tir: 75, pas: 75, reg: 75, def: 75, fis: 75 }, photo: '' };
 
-const n = (val) => !val || isNaN(val) ? 0 : Number(val);
+const n = (val) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    let str = String(val).replace(',', '.').replace(/[^0-9.-]/g, '');
+    return isNaN(str) || str === '' ? 0 : Number(str);
+};
 const getPhoto = (name) => photosMap[name] || "https://via.placeholder.com/150";
 
 const toInputDate = (dateStr) => {
@@ -22,11 +27,14 @@ function getSeasonData(seasonKey) {
 }
 
 const generateFifaStats = (p) => {
-    const pj = Math.max(1, n(p.PARTIDOS));
-    const victorias = n(p.VICTORIAS);
-    const goles = n(p.GOLES);
-    const mvps = n(p["MVP'S"]);
-    const promedio = n(p.PROMEDIO);
+    if(!p) return [50, 50, 50, 50, 50, 50];
+    
+    // Buscamos los datos con fallback por si el Excel tiene espacios en los títulos
+    const pj = Math.max(1, n(p.PARTIDOS || p.PJ || p['PARTIDOS ']));
+    const victorias = n(p.VICTORIAS || p.PG || p['VICTORIAS ']);
+    const goles = n(p.GOLES || p.Goles || p.G || p['GOLES ']);
+    const mvps = n(p["MVP'S"] || p.MVP || p.MVPS || p["MVP'S "]);
+    const promedio = n(p.PROMEDIO || p.Promedio || p.Prom || p['PROMEDIO ']);
     
     const wr = victorias / pj; 
     const ratio = goles / pj; 
@@ -34,8 +42,7 @@ const generateFifaStats = (p) => {
     
     const calc = (val, min, max) => Math.min(max, Math.max(min, Math.round(val)));
 
-    // MODIFICADORES SEGÚN POSICIÓN [RIT, TIR, PAS, REG, DEF, FIS]
-    const pos = String(p.POSICION || 'DC').toUpperCase();
+    const pos = String(p.POSICION || p['POSICION '] || 'DC').toUpperCase();
     let mod = [0, 0, 0, 0, 0, 0];
     if (pos.includes('GK')) mod = [-10, -30, -10, -20, 15, 0];
     else if (pos.includes('DF')) mod = [-5, -15, -5, -10, 15, 10];
@@ -235,36 +242,93 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
-        const homeText = DB['CONFIG'] && DB['CONFIG'].home_text ? DB['CONFIG'].home_text : 'Bienvenidos a la liga más competitiva del barrio.';
+        const homeText = DB['CONFIG'] && DB['CONFIG'].home_text ? DB['CONFIG'].home_text : '';
+        
+        const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
 
-        app.innerHTML = `
-            <div class="flex flex-col gap-8">
-                <div class="w-full">
-                    <h2 class="text-3xl font-display uppercase tracking-wide text-blue-400 mb-4 border-l-4 border-blue-800 pl-3">Último Partido</h2>
-                    <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="glass rounded-2xl p-8 border border-white/10 relative overflow-hidden cursor-pointer hover:border-blue-500/50 transition">
-                        <div class="flex flex-col md:flex-row gap-8 items-center">
-                            <div class="w-40 h-40 rounded-full mx-auto md:mx-0 overflow-hidden border-4 border-yellow-400 flex-shrink-0"><img src="${getPhoto(lastMatch.MVP)}" class="w-full h-full object-cover"></div>
-                            <div class="text-center md:text-left flex-grow">
-                                <p class="text-sm text-gray-500 uppercase">${formatDate(lastMatch.Fecha)} | Estadio ${lastMatch.Estadio || 'St. Diego'}</p>
-                                <div class="flex justify-center md:justify-start items-center gap-6 my-3">
-                                    <span class="text-6xl font-black text-blue-400">${lastMatch.Goles_E1}</span><span class="text-3xl text-gray-500">-</span><span class="text-6xl font-black text-red-400">${lastMatch.Goles_E2}</span>
-                                </div>
-                                <p class="text-2xl font-black text-yellow-400">🎩 ${lastMatch.MVP}</p>
-                                <p class="text-gray-300 mt-4 text-md italic">${homeText}</p>
+        let matchCardHTML = '<div class="glass p-8 rounded-2xl border border-white/10 h-full flex items-center justify-center"><p class="text-gray-500">No hay partidos cargados aún.</p></div>';
+        if (lastMatch) {
+            const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
+            const e1 = details.filter(d => String(d.Equipo).includes('1'));
+            const e2 = details.filter(d => String(d.Equipo).includes('2'));
+            
+            const formatScorers = (teamArray) => {
+                const scorers = teamArray.filter(p => n(p.Goles) > 0).map(p => `${p.Jugador} (${n(p.Goles)})`);
+                return scorers.length > 0 ? scorers.join('<br>') : 'Sin goles';
+            };
+            const scorers1 = formatScorers(e1);
+            const scorers2 = formatScorers(e2);
+
+            matchCardHTML = `
+                <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full">
+                    <div class="last-match-bg" style="background-image: url('${esquinaBg}')"></div>
+                    <div class="last-match-content">
+                        <!-- Arriba: Fecha -->
+                        <div class="flex justify-end items-center mb-8">
+                            <span class="text-xs font-bold uppercase tracking-widest text-gray-300 bg-black/50 px-2 py-1 rounded">${formatDate(lastMatch.Fecha)}</span>
+                        </div>
+
+                        <!-- Medio: 3 Columnas (Alineados arriba) -->
+                        <div class="grid grid-cols-3 gap-4 items-start text-center mb-6">
+                            <!-- IZQ: Equipo 1 -->
+                            <div class="flex flex-col items-center">
+                                <h3 class="pt-8 text-4xl md:text-5xl font-display uppercase text-blue-400 mb-4">EQUIPO 1</h3>
+                                <div class="text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
                             </div>
+
+                            <!-- CENTRO: Resultado Enmarcado y MVP -->
+                            <div class="flex flex-col items-center">
+                                <div class="bg-black/60 border border-white/10 rounded-2xl px-6 py-4 mb-8">
+                                    <div class="flex items-center gap-4 md:gap-6">
+                                        <span class="text-7xl md:text-8xl font-black text-blue-400 drop-shadow-lg">${lastMatch.Goles_E1}</span>
+                                        <span class="text-4xl text-gray-500">-</span>
+                                        <span class="text-7xl md:text-8xl font-black text-red-400 drop-shadow-lg">${lastMatch.Goles_E2}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- MVP más abajo y con etiqueta -->
+                                <div class="flex flex-col items-center mt-4">
+                                    <img src="${getPhoto(lastMatch.MVP)}" class="w-20 h-20 rounded-full border-4 border-yellow-400 object-cover mb-2 shadow-lg shadow-yellow-500/20">
+                                    <span class="text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
+                                    <p class="text-sm font-bold text-white">🎩 ${lastMatch.MVP}</p>
+                                </div>
+                            </div>
+
+                            <!-- DER: Equipo 2 -->
+                            <div class="flex flex-col items-center">
+                                <h3 class="pt-8 text-4xl md:text-5xl font-display uppercase text-red-400 mb-4">EQUIPO 2</h3>
+                                <div class="text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
+                            </div>
+                        </div>
+
+                        <!-- Abajo: Estadio -->
+                        <div class="text-right mt-4">
+                            <span class="text-xs font-bold uppercase tracking-widest text-gray-400 bg-black/50 px-2 py-1 rounded">🏟️ ${lastMatch.Estadio || 'St. Diego'}</span>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col lg:flex-row gap-8">
-                                        <div class="w-full lg:w-3/4 order-2 lg:order-1">
-                        <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Goleadores</h2>
-                        <div class="glass rounded-2xl overflow-hidden border border-white/10">
+            `;
+        }
+
+        const topScorers = inicioData.slice().sort((a,b) => n(b.GOLES||b.Goles) - n(a.GOLES||a.Goles)).slice(0, 10);
+
+        app.innerHTML = `
+            <div class="flex flex-col gap-8">
+                <!-- FILA 1: Ultimo Partido y Top 10 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 flex flex-col">
+                        <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Último Partido</h2>
+                        <div class="flex-grow">${matchCardHTML}</div>
+                    </div>
+                    <div class="lg:col-span-1 flex flex-col">
+                        <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Goleadores (Top 10)</h2>
+                        <div class="glass rounded-2xl overflow-hidden border border-white/10 glow-blue flex-grow">
                             <table class="w-full text-sm">
                                 <thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10">
                                     <tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center text-blue-400">GOLES</th></tr>
                                 </thead>
                                 <tbody>
-                                    ${inicioData.slice().sort((a,b) => n(b.GOLES||b.Goles) - n(a.GOLES||a.Goles)).map((j, i) => {
+                                    ${topScorers.map((j, i) => {
                                         const nombre = j.JUGADOR || Object.values(j)[0];
                                         const pj = n(j.PJ || j['PARTIDOS']);
                                         const goles = n(j.GOLES || j['Goles']);
@@ -275,18 +339,47 @@ function showView(view, param = null) {
                             </table>
                         </div>
                     </div>
-                    <div class="w-full lg:w-1/4 order-1 lg:order-2">
-                        <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-yellow-500 pl-3">Historial</h2>
-                        <div class="space-y-4">
-                            <div class="stat-record"><div class="text-2xl">🥇</div><div><p class="text-xs text-gray-500 uppercase">Mayor Goleada</p><p class="text-lg font-bold text-white">${records.biggestWin ? records.biggestWin.Goles_E1 + '-' + records.biggestWin.Goles_E2 : '-'}</p></div></div>
-                            <div class="stat-record"><div class="text-2xl">🔥</div><div><p class="text-xs text-gray-500 uppercase">Racha Victorias</p><p class="text-base font-bold text-blue-400">${records.winStreak.name} (${records.winStreak.val})</p></div></div>
-                            <div class="stat-record"><div class="text-2xl">📈</div><div><p class="text-xs text-gray-500 uppercase">Mejor Forma</p><p class="text-base font-bold text-cyan-400">${records.bestForm.name} (${records.bestForm.val})</p></div></div>
-                        </div>
+                </div>
+
+                <!-- FILA 2: Placas Centradas con Fondo -->
+                <div class="flex flex-col md:flex-row justify-center gap-6">
+                    <div class="stat-record w-full md:w-1/3 justify-center glow-yellow bg-black/40">
+                        <div class="text-2xl">🥇</div>
+                        <div class="text-center"><p class="text-xs text-gray-500 uppercase">Mayor Goleada</p><p class="text-lg font-bold text-white">${records.biggestWin ? records.biggestWin.Goles_E1 + '-' + records.biggestWin.Goles_E2 : '-'}</p></div>
+                    </div>
+                    <div class="stat-record w-full md:w-1/3 justify-center glow-blue bg-black/40">
+                        <div class="text-2xl">🔥</div>
+                        <div class="text-center"><p class="text-xs text-gray-500 uppercase">Racha Victorias</p><p class="text-base font-bold text-blue-400">${records.winStreak.name} (${records.winStreak.val})</p></div>
+                    </div>
+                    <div class="stat-record w-full md:w-1/3 justify-center glow-cyan bg-black/40">
+                        <div class="text-2xl">📈</div>
+                        <div class="text-center"><p class="text-xs text-gray-500 uppercase">Mejor Forma</p><p class="text-base font-bold text-cyan-400">${records.bestForm.name} (${records.bestForm.val})</p></div>
+                    </div>
+                </div>
+
+                <!-- FILA 3: Tabla Completa -->
+                <div>
+                    <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones</h2>
+                    <div class="glass rounded-2xl overflow-hidden border border-white/10">
+                        <table class="w-full text-sm">
+                            <thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10">
+                                <tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center">PG</th><th class="p-3 text-center">PE</th><th class="p-3 text-center">PP</th><th class="p-3 text-center">Goles</th><th class="p-3 text-center text-blue-400">PTS</th></tr>
+                            </thead>
+                            <tbody>
+                                ${inicioData.map((j, i) => {
+                                    const nombre = j.JUGADOR || Object.values(j)[0];
+                                    const pj = n(j.PJ || j['PARTIDOS']); const pg = n(j.PG || j['VICTORIAS']); const pe = n(j.PE || j['EMPATES']); const pp = n(j.PP || j['DERROTAS']);
+                                    const goles = n(j.GOLES || j['Goles']); const pts = n(j.PTS || j['Puntos']);
+                                    let rowColor = i === 0 ? 'bg-yellow-500/10' : i === 1 ? 'bg-gray-400/10' : i === 2 ? 'bg-orange-700/10' : '';
+                                    return `<tr class="border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center text-blue-400">${pg}</td><td class="p-3 text-center text-gray-400">${pe}</td><td class="p-3 text-center text-red-400">${pp}</td><td class="p-3 text-center text-gray-400">${goles}</td><td class="p-3 text-center font-black text-blue-400">${pts}</td></tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         `;
-    } 
+    }
     else if(view === 'matchDetail') {
         const match = DB['PARTIDOS'].find(m => m.ID_Partido == param);
         const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == param);
@@ -347,15 +440,24 @@ function showView(view, param = null) {
             <h1 class="text-5xl font-black text-white uppercase mb-1">Plantel</h1>
             <p class="text-gray-500 mb-6">Toca un jugador para ver su perfil completo</p>
             
-            <!-- BARRA DE BÚSQUEDA -->
-            <div class="glass p-4 rounded-xl mb-8 flex items-center gap-3">
-                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input type="text" id="search-players-input" oninput="filterPlayers(this.value)" placeholder="Buscar jugador..." class="bg-transparent text-white w-full outline-none text-lg">
+            <div class="glass p-4 rounded-xl mb-8 flex flex-col md:flex-row items-center gap-4">
+                <div class="flex items-center gap-3 w-full md:flex-grow">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="search-players-input" oninput="filterPlayers(this.value)" placeholder="Buscar jugador..." class="bg-transparent text-white w-full outline-none text-lg">
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <span class="text-gray-400 text-sm uppercase font-bold">Ordenar por:</span>
+                    <select id="sort-players-select" onchange="handlePlayerSortChange()" class="bg-gray-900 text-white p-2 rounded-lg outline-none border border-white/10">
+                        <option value="default">Por Defecto</option>
+                        <option value="name">Nombre</option>
+                        <option value="ovr">Overall</option>
+                        <option value="pos">Posición</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- CONTENEDOR DE LA GRILLA -->
             <div id="players-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                ${renderPlayersGrid('')}
+                ${renderPlayersGrid('', 'default')}
             </div>
         `;
     }
@@ -366,7 +468,7 @@ function showView(view, param = null) {
         const s = tempData.find(j => j.JUGADOR === param) || hist;
         const ovr = n(s.OVERALL);
         const cardType = getCardType(ovr);
-        const fifaStats = generateFifaStats(ovr, hist.POSICION); 
+        const fifaStats = generateFifaStats(s);  
         const { bestMate, worstRival, stadiumStats } = getTeammatesAndRivals(param); 
         
         let stadiosHtml = '';
@@ -436,13 +538,13 @@ function showView(view, param = null) {
             
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-yellow-500 pl-3">Placas de la Temporada</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                <div class="stat-record"><div class="text-2xl">💎</div><div><p class="text-xs text-gray-500 uppercase">Mejor Overall</p><p class="text-lg font-bold text-cyan-400">${maxOvr.n} (${maxOvr.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">⚽</div><div><p class="text-xs text-gray-500 uppercase">Bota de Oro</p><p class="text-lg font-bold text-blue-400">${maxGoles.n} (${maxGoles.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">📊</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Jugados</p><p class="text-lg font-bold text-white">${maxPj.n} (${maxPj.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">⭐</div><div><p class="text-xs text-gray-500 uppercase">Mejor Promedio</p><p class="text-lg font-bold text-cyan-400">${maxProm.n} (${maxProm.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">🥇</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Ganados</p><p class="text-lg font-bold text-blue-400">${maxPg.n} (${maxPg.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">🥉</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Perdidos</p><p class="text-lg font-bold text-red-400">${maxPp.n} (${maxPp.v})</p></div></div>
-                <div class="stat-record"><div class="text-2xl">🎩</div><div><p class="text-xs text-gray-500 uppercase">Máximo MVP</p><p class="text-lg font-bold text-yellow-400">${maxMvp.n} (${maxMvp.v})</p></div></div>
+                <div class="stat-record bg-cyan-500/10"><div class="text-2xl">💎</div><div><p class="text-xs text-gray-500 uppercase">Mejor Overall</p><p class="text-lg font-bold text-cyan-400">${maxOvr.n} (${maxOvr.v})</p></div></div>
+                <div class="stat-record bg-blue-500/10"><div class="text-2xl">⚽</div><div><p class="text-xs text-gray-500 uppercase">Bota de Oro</p><p class="text-lg font-bold text-blue-400">${maxGoles.n} (${maxGoles.v})</p></div></div>
+                <div class="stat-record bg-gray-500/10"><div class="text-2xl">📊</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Jugados</p><p class="text-lg font-bold text-white">${maxPj.n} (${maxPj.v})</p></div></div>
+                <div class="stat-record bg-teal-500/10"><div class="text-2xl">⭐</div><div><p class="text-xs text-gray-500 uppercase">Mejor Promedio</p><p class="text-lg font-bold text-cyan-400">${maxProm.n} (${maxProm.v})</p></div></div>
+                <div class="stat-record bg-green-500/10"><div class="text-2xl">🥇</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Ganados</p><p class="text-lg font-bold text-blue-400">${maxPg.n} (${maxPg.v})</p></div></div>
+                <div class="stat-record bg-red-500/10"><div class="text-2xl">🥉</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Perdidos</p><p class="text-lg font-bold text-red-400">${maxPp.n} (${maxPp.v})</p></div></div>
+                <div class="stat-record bg-yellow-500/10"><div class="text-2xl">🎩</div><div><p class="text-xs text-gray-500 uppercase">Máximo MVP</p><p class="text-lg font-bold text-yellow-400">${maxMvp.n} (${maxMvp.v})</p></div></div>
             </div>
 
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Partidos Jugados</h3>
@@ -518,15 +620,17 @@ function showView(view, param = null) {
     window.scrollTo(0, 0);
 }
 // Genera el HTML de la grilla de jugadores según la búsqueda
-function renderPlayersGrid(query = '') {
-    const histData = DB['HISTORICA'] || [];
-    const filteredData = histData.filter(p => String(p.JUGADOR).toLowerCase().includes(query.toLowerCase()));
-    
-    if (filteredData.length === 0) {
-        return '<p class="text-gray-500 text-center col-span-4 mt-10">No se encontraron jugadores con ese nombre...</p>';
-    }
+function renderPlayersGrid(query = '', sortBy = 'default') {
+    let histData = DB['HISTORICA'] || [];
+    let dataToRender = histData.filter(p => String(p.JUGADOR).toLowerCase().includes(query.toLowerCase()));
 
-    return filteredData.map(p => `
+    if (sortBy === 'name') dataToRender.sort((a,b) => String(a.JUGADOR).localeCompare(String(b.JUGADOR)));
+    else if (sortBy === 'ovr') dataToRender.sort((a,b) => n(b.OVERALL) - n(a.OVERALL));
+    else if (sortBy === 'pos') dataToRender.sort((a,b) => String(a.POSICION).localeCompare(String(b.POSICION)));
+
+    if (dataToRender.length === 0) return '<p class="text-gray-500 text-center col-span-4 mt-10">No se encontraron jugadores...</p>';
+
+    return dataToRender.map(p => `
         <div onclick="showView('playerProfile', '${p.JUGADOR}')" class="glass p-4 rounded-2xl text-center hover:border-blue-500/50 transition cursor-pointer flex flex-col items-center justify-center">
             <div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 ${n(p.OVERALL)>=94 ? 'border-cyan-400' : n(p.OVERALL)>=75 ? 'border-yellow-400' : n(p.OVERALL)>=68 ? 'border-gray-300' : 'border-orange-700'}">
                 <img src="${getPhoto(p.JUGADOR)}" alt="${p.JUGADOR}" class="w-full h-full object-cover">
@@ -540,9 +644,15 @@ function renderPlayersGrid(query = '') {
     `).join('');
 }
 
-// Se ejecuta cada vez que escribis una letra en el buscador
 function filterPlayers(query) {
-    document.getElementById('players-grid').innerHTML = renderPlayersGrid(query);
+    const sortBy = document.getElementById('sort-players-select').value;
+    document.getElementById('players-grid').innerHTML = renderPlayersGrid(query, sortBy);
+}
+
+function handlePlayerSortChange() {
+    const query = document.getElementById('search-players-input').value;
+    const sortBy = document.getElementById('sort-players-select').value;
+    document.getElementById('players-grid').innerHTML = renderPlayersGrid(query, sortBy);
 }
 
 
