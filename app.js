@@ -237,9 +237,24 @@ function showView(view, param = null) {
                     </div>
                 </div>
                 <div class="flex flex-col lg:flex-row gap-8">
-                    <div class="w-full lg:w-3/4 order-2 lg:order-1">
-                        <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones</h2>
-                        <div class="glass rounded-2xl overflow-hidden border border-white/10"><table class="w-full text-sm"><thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10"><tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center">Goles</th><th class="p-3 text-center text-blue-400">PTS</th></tr></thead><tbody>${inicioData.map((j, i) => { const nombre = j.JUGADOR || Object.values(j)[0]; const pj = n(j.PJ || j['PARTIDOS']); const goles = n(j.GOLES || j['Goles']); const pts = n(j.PTS || j['Puntos']); let rowColor = i === 0 ? 'bg-yellow-500/10' : i === 1 ? 'bg-gray-400/10' : i === 2 ? 'bg-orange-700/10' : ''; return `<tr class="border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center text-gray-400">${goles}</td><td class="p-3 text-center font-black text-blue-400">${pts}</td></tr>`; }).join('')}</tbody></table></div>
+                                        <div class="w-full lg:w-3/4 order-2 lg:order-1">
+                        <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Goleadores</h2>
+                        <div class="glass rounded-2xl overflow-hidden border border-white/10">
+                            <table class="w-full text-sm">
+                                <thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10">
+                                    <tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center text-blue-400">GOLES</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${inicioData.slice().sort((a,b) => n(b.GOLES||b.Goles) - n(a.GOLES||a.Goles)).map((j, i) => {
+                                        const nombre = j.JUGADOR || Object.values(j)[0];
+                                        const pj = n(j.PJ || j['PARTIDOS']);
+                                        const goles = n(j.GOLES || j['Goles']);
+                                        let rowColor = i === 0 ? 'bg-yellow-500/10' : i === 1 ? 'bg-gray-400/10' : i === 2 ? 'bg-orange-700/10' : '';
+                                        return `<tr class="border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center font-black text-blue-400">${goles}</td></tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="w-full lg:w-1/4 order-1 lg:order-2">
                         <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-yellow-500 pl-3">Historial</h2>
