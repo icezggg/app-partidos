@@ -381,12 +381,38 @@ function showView(view, param = null) {
             <div class="space-y-4">${[['RITMO', fifaStats[0]], ['TIRO', fifaStats[1]], ['PASE', fifaStats[2]], ['REGATE', fifaStats[3]], ['DEFENSA', fifaStats[4]], ['FISICO', fifaStats[5]]].map(stat => `<div class="flex items-center gap-4"><span class="text-sm font-bold text-gray-400 w-24">${stat[0]}</span><div class="flex-grow bg-gray-800 rounded-full h-3"><div class="bg-gradient-to-r from-blue-600 to-blue-400 h-3 rounded-full" style="width: ${stat[1]}%"></div></div><span class="text-lg font-black text-white w-10 text-right">${stat[1]}</span></div>`).join('')}</div>
         `;
     }
-    else if(view === 'seasons') {
+    
+         else if(view === 'seasons') {
         const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
         const matches = (DB['PARTIDOS'] || []).filter(m => currentSeason === 'hist' ? true : String(m.Temporada) === String(currentSeason));
+        
+        // CALCULAR LAS 7 PLACAS
+        let maxOvr = {n:'-', v:0}, maxGoles = {n:'-', v:0}, maxPj = {n:'-', v:0}, maxProm = {n:'-', v:0}, maxPg = {n:'-', v:0}, maxPp = {n:'-', v:0}, maxMvp = {n:'-', v:0};
+        tempData.forEach(p => {
+            if(n(p.OVERALL) > maxOvr.v) maxOvr = {n:p.JUGADOR, v:n(p.OVERALL)};
+            if(n(p.GOLES) > maxGoles.v) maxGoles = {n:p.JUGADOR, v:n(p.GOLES)};
+            if(n(p.PARTIDOS) > maxPj.v) maxPj = {n:p.JUGADOR, v:n(p.PARTIDOS)};
+            if(n(p.PROMEDIO) > maxProm.v) maxProm = {n:p.JUGADOR, v:n(p.PROMEDIO).toFixed(2)};
+            if(n(p.VICTORIAS) > maxPg.v) maxPg = {n:p.JUGADOR, v:n(p.VICTORIAS)};
+            if(n(p.DERROTAS) > maxPp.v) maxPp = {n:p.JUGADOR, v:n(p.DERROTAS)};
+            if(n(p["MVP'S"]) > maxMvp.v) maxMvp = {n:p.JUGADOR, v:n(p["MVP'S"])};
+        });
+
         app.innerHTML = `
             <h1 class="text-5xl font-black text-white uppercase mb-6">Temporadas</h1>
             <div class="flex gap-2 mb-8">${['hist', '1', '2'].map(t => `<button onclick="changeSeason('${t}')" class="flex-1 py-3 rounded-xl font-bold transition ${currentSeason == t ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">${t === 'hist' ? 'Histórica' : 'Temp ' + t}</button>`).join('')}</div>
+            
+            <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-yellow-500 pl-3">Placas de la Temporada</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <div class="stat-record"><div class="text-2xl">💎</div><div><p class="text-xs text-gray-500 uppercase">Mejor Overall</p><p class="text-lg font-bold text-cyan-400">${maxOvr.n} (${maxOvr.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">⚽</div><div><p class="text-xs text-gray-500 uppercase">Bota de Oro</p><p class="text-lg font-bold text-blue-400">${maxGoles.n} (${maxGoles.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">📊</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Jugados</p><p class="text-lg font-bold text-white">${maxPj.n} (${maxPj.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">⭐</div><div><p class="text-xs text-gray-500 uppercase">Mejor Promedio</p><p class="text-lg font-bold text-cyan-400">${maxProm.n} (${maxProm.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">🥇</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Ganados</p><p class="text-lg font-bold text-blue-400">${maxPg.n} (${maxPg.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">🥉</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Perdidos</p><p class="text-lg font-bold text-red-400">${maxPp.n} (${maxPp.v})</p></div></div>
+                <div class="stat-record"><div class="text-2xl">🎩</div><div><p class="text-xs text-gray-500 uppercase">Máximo MVP</p><p class="text-lg font-bold text-yellow-400">${maxMvp.n} (${maxMvp.v})</p></div></div>
+            </div>
+
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Partidos Jugados</h3>
             <div class="space-y-3 mb-8">${matches.length === 0 ? '<p class="text-gray-500">No hay partidos.</p>' : matches.map(p => `<div onclick="showView('matchDetail', '${p.ID_Partido}')" class="glass p-4 rounded-xl flex justify-between items-center hover:bg-white/5 cursor-pointer border border-white/5"><div><p class="text-xs text-gray-500">${formatDate(p.Fecha)} | ${p.Estadio || 'St. Diego'}</p><p class="text-sm font-bold text-white">Equipo 1 vs Equipo 2</p></div><div class="flex items-center gap-4"><span class="text-2xl font-black text-white">${p.Goles_E1} - ${p.Goles_E2}</span></div></div>`).join('')}</div>
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Estadísticas Individuales</h3>
