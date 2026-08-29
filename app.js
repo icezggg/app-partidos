@@ -82,8 +82,7 @@ function getCardType(ovr) { if(ovr >= 94) return 'toty'; if(ovr >= 75) return 'g
 function getOvrColor(ovr) { if(ovr >= 94) return 'text-cyan-400'; if(ovr >= 75) return 'text-yellow-400'; if(ovr >= 68) return 'text-gray-300'; return 'text-orange-600'; }
 
 function toggleDrawer() {
-    document.getElementById('drawer').classList.toggle('drawer-open');
-    document.getElementById('drawer-backdrop').classList.toggle('hidden');
+    document.getElementById('drawer').classList.toggle('drawer-open');
 }
 
 function calculateRecords() {
