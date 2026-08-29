@@ -42,20 +42,23 @@
             </nav>
         </header>
 
-        <div id="drawer-backdrop" onclick="toggleDrawer()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
-        <div id="drawer" class="fixed top-0 left-0 h-full w-64 bg-gray-900 z-50 transform -translate-x-full transition-transform md:hidden">
-            <div class="p-6 border-b border-white/10">
+        <div id="drawer" class="fixed inset-0 z-50 transform -translate-x-full transition-transform duration-300 md:hidden glass-dark flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-white/10">
                 <img class="app-logo h-10 w-auto" src="https://via.placeholder.com/150x50?text=TecSports" alt="TecSports">
+                <button onclick="toggleDrawer()" class="text-4xl text-gray-300 hover:text-white transition">&times;</button>
             </div>
-            <nav class="p-4 flex flex-col gap-2">
-                <a href="#" onclick="toggleDrawer(); showView('home')" class="sidebar-link">🏠 Inicio</a>
-                <a href="#" onclick="toggleDrawer(); showView('players')" class="sidebar-link">👥 Jugadores</a>
-                <a href="#" onclick="toggleDrawer(); showView('seasons')" class="sidebar-link">🏆 Temporadas</a>
-                <a href="#" onclick="toggleDrawer(); showView('duels')" class="sidebar-link">⚔️ Duelos</a>
-                <hr class="border-white/10 my-2">
-                <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link">🃏 Gen. Carta</a>
-                <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link">⚽ Gen. Equipos</a>
+            <nav class="flex-grow p-8 flex flex-col gap-6">
+                <a href="#" onclick="toggleDrawer(); showView('home')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🏠 Inicio</a>
+                <a href="#" onclick="toggleDrawer(); showView('players')" class="sidebar-link text-2xl font-display tracking-wide uppercase">👥 Jugadores</a>
+                <a href="#" onclick="toggleDrawer(); showView('seasons')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🏆 Temporadas</a>
+                <a href="#" onclick="toggleDrawer(); showView('duels')" class="sidebar-link text-2xl font-display tracking-wide uppercase">⚔️ Duelos</a>
+                <hr class="border-white/10 my-4">
+                <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🃏 Gen. Carta</a>
+                <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">⚽ Gen. Equipos</a>
             </nav>
+            <div class="p-8 border-t border-white/10">
+                <button onclick="toggleDrawer(); checkAdmin()" class="sidebar-link text-xl text-gray-400 hover:text-white transition uppercase font-display tracking-wide">⚙️ Admin</button>
+            </div>
         </div>
 
         <main class="pb-10 w-full">
