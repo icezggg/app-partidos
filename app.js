@@ -613,11 +613,10 @@ function showView(view, param = null) {
         });
     }
     
-         else if(view === 'seasons') {
+    else if(view === 'seasons') {
         const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
         const matches = (DB['PARTIDOS'] || []).filter(m => currentSeason === 'hist' ? true : String(m.Temporada) === String(currentSeason));
         
-        // CALCULAR LAS 7 PLACAS
         let maxOvr = {n:'-', v:0}, maxGoles = {n:'-', v:0}, maxPj = {n:'-', v:0}, maxProm = {n:'-', v:0}, maxPg = {n:'-', v:0}, maxPp = {n:'-', v:0}, maxMvp = {n:'-', v:0};
         tempData.forEach(p => {
             if(n(p.OVERALL) > maxOvr.v) maxOvr = {n:p.JUGADOR, v:n(p.OVERALL)};
@@ -646,8 +645,28 @@ function showView(view, param = null) {
 
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Partidos Jugados</h3>
             <div class="space-y-3 mb-8">${matches.length === 0 ? '<p class="text-gray-500">No hay partidos.</p>' : matches.map(p => `<div onclick="showView('matchDetail', '${p.ID_Partido}')" class="glass p-4 rounded-xl flex justify-between items-center hover:bg-white/5 cursor-pointer border border-white/5"><div><p class="text-xs text-gray-500">${formatDate(p.Fecha)} | ${p.Estadio || 'St. Diego'}</p><p class="text-sm font-bold text-white">Equipo 1 vs Equipo 2</p></div><div class="flex items-center gap-4"><span class="text-2xl font-black text-white">${p.Goles_E1} - ${p.Goles_E2}</span></div></div>`).join('')}</div>
+            
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Estadísticas Individuales</h3>
-            <div class="glass rounded-2xl overflow-x-auto border border-white/10"><table class="w-full text-sm whitespace-nowrap"><thead class="bg-white/5 text-gray-500 uppercase text-xs"><tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center">PG</th><th class="p-3 text-center">PE</th><th class="p-3 text-center">PP</th><th class="p-3 text-center">Goles</th><th class="p-3 text-center">Ratio</th><th class="p-3 text-center">MVP</th><th class="p-3 text-center">Prom</th></tr></thead><tbody>${tempData.filter(p => n(p.PARTIDOS) > 0).map(p => `<tr class="border-t border-white/5 hover:bg-white/5 cursor-pointer" onclick="showView('playerProfile', '${p.JUGADOR}')"><td class="p-3 font-semibold text-white">${p.JUGADOR}</td><td class="p-3 text-center text-gray-400">${n(p.PARTIDOS)}</td><td class="p-3 text-center text-blue-400">${n(p.VICTORIAS)}</td><td class="p-3 text-center text-gray-400">${n(p.EMPATES)}</td><td class="p-3 text-center text-red-400">${n(p.DERROTAS)}</td><td class="p-3 text-center font-bold text-blue-400">${n(p.GOLES)}</td><td class="p-3 text-center text-gray-400">${n(p["RATIO GOLEADOR"]).toFixed(2)}</td><td class="p-3 text-center text-yellow-400">${n(p["MVP'S"])}</td><td class="p-3 text-center text-cyan-400">${n(p.PROMEDIO).toFixed(2)}</td></tr>`).join('')}</tbody></table></div>
+            <div class="glass rounded-2xl overflow-x-auto border border-white/10">
+                <table class="w-full text-sm whitespace-nowrap">
+                    <thead class="bg-white/5 text-gray-500 uppercase text-xs">
+                        <tr>
+                            <th class="p-3 text-left cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('JUGADOR')">Jugador ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PARTIDOS')">PJ ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('VICTORIAS')">PG ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('EMPATES')">PE ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('RATIO GOLEADOR')">Ratio ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('MVP\\'S')">MVP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
+                        </tr>
+                    </thead>
+                    <tbody id="seasons-tbody">
+                        ${renderSeasonsTableBody(tempData)}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
     else if(view === 'duels') {
