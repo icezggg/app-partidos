@@ -658,7 +658,7 @@ else if(view === 'seasons') {
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('RATIO GOLEADOR')">Ratio ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP\\'S')">MVP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP')">MVP ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
                         </tr>
                     </thead>
@@ -1148,6 +1148,27 @@ async function checkAdmin() {
         showView('admin'); 
         return; 
     }
+
+    // Crear Modal Estético
+    const modal = document.createElement('div');
+    modal.id = 'admin-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center">
+            <h3 class="text-2xl font-display uppercase text-blue-400 mb-2 tracking-wide">🔒 Acceso Admin</h3>
+            <p class="text-gray-500 text-sm mb-6">Ingresá la clave para gestionar la liga</p>
+            <input type="password" id="admin-pass-input" placeholder="Contraseña" class="w-full bg-gray-900 text-white p-3 rounded-xl mb-4 outline-none border border-white/10 text-center text-lg tracking-widest">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('admin-modal').remove()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                <button onclick="submitAdminPass()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Ingresar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('admin-pass-input').focus();
+    document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
+}
+
 let seasonsSortKey = null;
 let seasonsSortDir = 'desc';
 
@@ -1186,26 +1207,6 @@ function renderSeasonsTableBody(tempData) {
     }
 
     return data.map(p => `<tr class="border-t border-white/5 hover:bg-white/5 cursor-pointer" onclick="showView('playerProfile', '${p.JUGADOR}')"><td class="p-3 font-semibold text-white">${p.JUGADOR}</td><td class="p-3 text-center text-gray-400">${n(p.PARTIDOS)}</td><td class="p-3 text-center text-blue-400">${n(p.VICTORIAS)}</td><td class="p-3 text-center text-gray-400">${n(p.EMPATES)}</td><td class="p-3 text-center text-red-400">${n(p.DERROTAS)}</td><td class="p-3 text-center font-bold text-blue-400">${n(p.GOLES)}</td><td class="p-3 text-center text-gray-400">${n(p["RATIO GOLEADOR"]).toFixed(2)}</td><td class="p-3 text-center text-yellow-400">${n(p["MVP'S"])}</td><td class="p-3 text-center text-cyan-400">${n(p.PROMEDIO).toFixed(2)}</td></tr>`).join('');
-}
-
-    // Crear Modal Estético
-    const modal = document.createElement('div');
-    modal.id = 'admin-modal';
-    modal.className = 'admin-modal-overlay';
-    modal.innerHTML = `
-        <div class="admin-modal-box text-center">
-            <h3 class="text-2xl font-display uppercase text-blue-400 mb-2 tracking-wide">🔒 Acceso Admin</h3>
-            <p class="text-gray-500 text-sm mb-6">Ingresá la clave para gestionar la liga</p>
-            <input type="password" id="admin-pass-input" placeholder="Contraseña" class="w-full bg-gray-900 text-white p-3 rounded-xl mb-4 outline-none border border-white/10 text-center text-lg tracking-widest">
-            <div class="flex gap-2">
-                <button onclick="document.getElementById('admin-modal').remove()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
-                <button onclick="submitAdminPass()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Ingresar</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById('admin-pass-input').focus();
-    document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
 }
 
 async function submitAdminPass() {
