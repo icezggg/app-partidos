@@ -755,7 +755,7 @@ function showView(view, param = null) {
     else if(view === 'admin') { renderAdmin(); }
     window.scrollTo(0, 0);
     
-    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA (Usando BASE_URL absoluta)
+    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA
     if (!window.isRouting) {
         let url = BASE_URL + view;
         if (param) url += '/' + encodeURIComponent(param);
@@ -1240,11 +1240,9 @@ function renderDuel() {
 
 // --- SISTEMA DE RUTAS (URLs REALES) ---
 
-// Lista de vistas válidas para detectar la raíz
 const validViews = ['home', 'players', 'seasons', 'duels', 'matchDetail', 'playerProfile', 'admin', 'cardGen', 'teamGen'];
 let BASE_URL = '';
 
-// Función para encontrar la raíz absoluta de tu página (ej: /app-partidos/)
 function getBasePath() {
     let path = window.location.pathname;
     if (path.endsWith('/index.html')) return path.substring(0, path.length - 'index.html'.length);
@@ -1257,12 +1255,10 @@ function getBasePath() {
     return path.endsWith('/') ? path : path + '/';
 }
 
-// Evitar que los <a href="#"> agreguen un "#" feo a la URL
 document.addEventListener('click', e => {
     if (e.target.closest('a[href="#"]')) e.preventDefault();
 });
 
-// Función para leer la URL al entrar a la página
 function getRouteFromUrl() {
     let search = window.location.search;
     if (search.startsWith('?/')) {
@@ -1287,7 +1283,6 @@ function getRouteFromUrl() {
     return { view: 'home', param: null };
 }
 
-// Manejar los botones de Atrás/Adelante del navegador
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
         showView(e.state.view, e.state.param);
@@ -1296,27 +1291,24 @@ window.addEventListener('popstate', (e) => {
     }
 });
 
-// Iniciar la app leyendo la URL
 async function initApp() {
-    await loadData(); // Carga los datos del Excel
+    await loadData();
     
-    // Manejar si viene del truco del 404.html
     let search = window.location.search;
     if (search.startsWith('?/')) {
         let route = search.substring(2).split('&')[0];
         let parts = route.split('/');
         let view = parts[0] || 'home';
         let param = parts[1] ? decodeURIComponent(parts[1]) : null;
-        BASE_URL = getBasePath(); // Calculamos la raíz
+        BASE_URL = getBasePath();
         let cleanUrl = BASE_URL + view + (param ? '/' + encodeURIComponent(param) : '');
-        window.history.replaceState({}, '', cleanUrl); // Limpiamos la URL
+        window.history.replaceState({}, '', cleanUrl);
         showView(view, param);
     } else {
-        BASE_URL = getBasePath(); // Calculamos la raíz
+        BASE_URL = getBasePath();
         const initialRoute = getRouteFromUrl();
         showView(initialRoute.view, initialRoute.param);
     }
 }
 
-// ¡Arrancamos!
 initApp();
