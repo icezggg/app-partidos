@@ -1191,4 +1191,64 @@ function renderDuel() {
     return `<div class="glass rounded-2xl p-8 border border-white/10"><div class="flex justify-between items-center mb-10"><div class="text-center flex-1"><div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 border-blue-500"><img src="${getPhoto(s1.JUGADOR)}" class="w-full h-full object-cover"></div><h3 class="font-bold text-xl text-white">${s1.JUGADOR}</h3></div><div class="text-4xl font-black bg-gradient-to-r from-blue-400 to-red-500 bg-clip-text text-transparent">VS</div><div class="text-center flex-1"><div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 border-red-500"><img src="${getPhoto(s2.JUGADOR)}" class="w-full h-full object-cover"></div><h3 class="font-bold text-xl text-white">${s2.JUGADOR}</h3></div></div><div class="space-y-6">${stats.map(s => { const total = s.val1 + s.val2; const w1 = total === 0 ? 50 : (s.val1 / total) * 100; const w2 = total === 0 ? 50 : (s.val2 / total) * 100; return `<div><div class="flex justify-between text-2xl mb-2"><span class="font-black ${s.val1 >= s.val2 ? 'text-blue-400' : 'text-gray-600'}">${s.val1}</span><span class="text-gray-500 uppercase text-sm tracking-widest">${s.label}</span><span class="font-black ${s.val2 >= s.val1 ? 'text-red-400' : 'text-gray-600'}">${s.val2}</span></div><div class="flex h-3 rounded-full overflow-hidden bg-gray-800"><div class="bg-blue-500" style="width: ${w1}%"></div><div class="bg-red-500" style="width: ${w2}%"></div></div></div>`; }).join('')}</div></div>`;
 }
 
-loadData();
+// --- SISTEMA DE RUTAS (URLs REALES) ---
+
+// 1. Función para leer la URL al entrar a la página
+function getRouteFromUrl() {
+    let search = window.location.search;
+    // Si viene del truco del 404.html
+    if (search.startsWith('?/')) {
+        let route = search.substring(2);
+        // Limpiamos la URL para que no se vea fea
+        window.history.replaceState({}, '', window.location.pathname + route);
+        let parts = route.split('/');
+        return { view: parts[0] || 'home', param: decodeURIComponent(parts[1] || '') || null };
+    }
+    
+    // Si entró directo
+    let parts = window.location.pathname.split('/').filter(p => p !== '');
+    if (parts.length >= 2) {
+        let view = parts[1]; // El primer pedazo después del repo
+        let param = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
+        return { view: view, param: param };
+    }
+    return { view: 'home', param: null };
+}
+
+// 2. Modificar showView para que cambie la URL sin recargar
+// Buscamos la función original y le agregamos un parámetro 'updateHistory'
+const originalShowView = showView;
+showView = function(view, param = null, updateHistory = true) {
+    originalShowView(view, param); // Ejecuta el renderizado normal
+    
+    if (updateHistory) {
+        let url = view;
+        if (param) url += '/' + encodeURIComponent(param);
+        window.history.pushState({ view, param }, '', url);
+    }
+};
+
+// 3. Manejar los botones de Atrás/Adelante del navegador
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        showView(e.state.view, e.state.param, false);
+    } else {
+        showView('home', null, false);
+    }
+});
+
+// 4. Iniciar la app leyendo la URL
+async function initApp() {
+    await loadData(); // Carga los datos del Excel
+    
+    // Una vez cargados, miramos qué URL pidió el usuario y lo llevamos ahí
+    const initialRoute = getRouteFromUrl();
+    showView(initialRoute.view, initialRoute.param, false);
+    // Reemplazamos el estado inicial para que quede prolijo
+    let url = initialRoute.view;
+    if (initialRoute.param) url += '/' + encodeURIComponent(initialRoute.param);
+    window.history.replaceState({ view: initialRoute.view, param: initialRoute.param }, '', url);
+}
+
+
+initApp();
