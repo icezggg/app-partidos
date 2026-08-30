@@ -749,6 +749,11 @@ function showView(view, param = null) {
     }
     else if(view === 'admin') { renderAdmin(); }
     window.scrollTo(0, 0);
+    
+    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA
+    let url = view;
+    if (param) url += '/' + encodeURIComponent(param);
+    window.history.pushState({ view, param }, '', url);
 }
 // Genera el HTML de la grilla de jugadores según la búsqueda
 function renderPlayersGrid(query = '', sortBy = 'default') {
@@ -1193,47 +1198,38 @@ function renderDuel() {
 
 // --- SISTEMA DE RUTAS (URLs REALES) ---
 
-// 1. Función para leer la URL al entrar a la página
+// 1. Evitar que los <a href="#"> agreguen un "#" feo a la URL
+document.addEventListener('click', e => {
+    if (e.target.closest('a[href="#"]')) e.preventDefault();
+});
+
+// 2. Función para leer la URL al entrar a la página
 function getRouteFromUrl() {
     let search = window.location.search;
     // Si viene del truco del 404.html
     if (search.startsWith('?/')) {
-        let route = search.substring(2);
-        // Limpiamos la URL para que no se vea fea
+        let route = search.substring(2).split('&')[0];
         window.history.replaceState({}, '', window.location.pathname + route);
         let parts = route.split('/');
         return { view: parts[0] || 'home', param: decodeURIComponent(parts[1] || '') || null };
     }
     
-    // Si entró directo
+    // Si entró directo a una URL
     let parts = window.location.pathname.split('/').filter(p => p !== '');
     if (parts.length >= 2) {
-        let view = parts[1]; // El primer pedazo después del repo
+        let view = parts[1]; // agarramos la parte después del repo
         let param = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
         return { view: view, param: param };
     }
     return { view: 'home', param: null };
 }
 
-// 2. Modificar showView para que cambie la URL sin recargar
-// Buscamos la función original y le agregamos un parámetro 'updateHistory'
-const originalShowView = showView;
-showView = function(view, param = null, updateHistory = true) {
-    originalShowView(view, param); // Ejecuta el renderizado normal
-    
-    if (updateHistory) {
-        let url = view;
-        if (param) url += '/' + encodeURIComponent(param);
-        window.history.pushState({ view, param }, '', url);
-    }
-};
-
 // 3. Manejar los botones de Atrás/Adelante del navegador
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
-        showView(e.state.view, e.state.param, false);
+        showView(e.state.view, e.state.param);
     } else {
-        showView('home', null, false);
+        showView('home');
     }
 });
 
@@ -1241,14 +1237,10 @@ window.addEventListener('popstate', (e) => {
 async function initApp() {
     await loadData(); // Carga los datos del Excel
     
-    // Una vez cargados, miramos qué URL pidió el usuario y lo llevamos ahí
+    // Una vez cargados, miramos qué URL pidió el usuario
     const initialRoute = getRouteFromUrl();
-    showView(initialRoute.view, initialRoute.param, false);
-    // Reemplazamos el estado inicial para que quede prolijo
-    let url = initialRoute.view;
-    if (initialRoute.param) url += '/' + encodeURIComponent(initialRoute.param);
-    window.history.replaceState({ view: initialRoute.view, param: initialRoute.param }, '', url);
+    showView(initialRoute.view, initialRoute.param);
 }
 
-
+// ¡Arrancamos!
 initApp();
