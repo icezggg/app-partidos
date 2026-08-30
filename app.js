@@ -82,7 +82,7 @@ function getCardType(ovr) { if(ovr >= 94) return 'toty'; if(ovr >= 75) return 'g
 function getOvrColor(ovr) { if(ovr >= 94) return 'text-cyan-400'; if(ovr >= 75) return 'text-yellow-400'; if(ovr >= 68) return 'text-gray-300'; return 'text-orange-600'; }
 
 function toggleDrawer() {
-    document.getElementById('drawer').classList.toggle('drawer-open');
+    document.getElementById('drawer').classList.toggle('drawer-open');
 }
 
 function calculateRecords() {
@@ -209,24 +209,52 @@ function getTeammatesAndRivals(playerName) {
 
 async function loadData() {
     try {
-        const res = await fetch(API_URL);
-        DB = await res.json();
-        if(DB['FOTOS']) {
-            DB['FOTOS'].forEach(row => {
-                if(row.JUGADOR && row.FOTO_ID) {
-                    const url = `https://drive.google.com/thumbnail?id=${row.FOTO_ID}&sz=w500`;
-                    photosMap[row.JUGADOR] = url;
-                    if(row.JUGADOR === 'LOGO') {
-                        document.querySelectorAll('.app-logo').forEach(img => img.src = url);
-                    }
-                }
-            });
+        // 1. Intentamos leer los datos guardados en la memoria del navegador (Caché)
+        const cachedDB = localStorage.getItem('tecSportsDB');
+        if(cachedDB) {
+            DB = JSON.parse(cachedDB);
+            processPhotos(DB);
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app-body').style.display = 'block';
+            showView('home'); // Renderiza instantáneo
         }
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('app-body').style.display = 'block';
-        showView('home');
+        
+        // 2. En segundo plano, pedimos los datos nuevos a Google
+        const res = await fetch(API_URL + '?t=' + Date.now()); // El "?t=" evita caché de red
+        DB = await res.json();
+        localStorage.setItem('tecSportsDB', JSON.stringify(DB)); // Guardamos en caché
+        processPhotos(DB);
+        
+        // Si no había caché, mostramos la web ahora
+        if(!cachedDB) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app-body').style.display = 'block';
+            showView('home');
+        } else {
+            // Si ya estaba renderizada, la actualizamos silenciosamente
+            const currentView = document.querySelector('.sidebar-link.active')?.getAttribute('onclick').match(/'([^']+)'/)[1] || 'home';
+            showView(currentView);
+        }
     } catch (e) {
-        document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión.</p>';
+        document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión. Usá datos guardados si hay.</p>';
+    }
+}
+
+// Función para procesar fotos rápidamente
+function processPhotos(dbData) {
+    photosMap = {};
+    if(dbData['FOTOS']) {
+        dbData['FOTOS'].forEach(row => {
+            if(row.JUGADOR && row.FOTO_ID) {
+                let size = 'sz=w150';
+                if(['LOGO', 'ESQUINA', 'ORO', 'PLATA', 'BRONCE', 'TOTY'].includes(row.JUGADOR)) size = 'sz=w500';
+                const url = `https://drive.google.com/thumbnail?id=${row.FOTO_ID}&${size}`;
+                photosMap[row.JUGADOR] = url;
+                if(row.JUGADOR === 'LOGO') {
+                    document.querySelectorAll('.app-logo').forEach(img => img.src = url);
+                }
+            }
+        });
     }
 }
 
@@ -271,7 +299,7 @@ function showView(view, param = null) {
                         <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-6">
                             <!-- IZQ: Equipo 1 -->
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
+                                <h3 class="pt-8 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
                             </div>
 
@@ -295,7 +323,7 @@ function showView(view, param = null) {
 
                             <!-- DER: Equipo 2 -->
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
+                                <h3 class="pt-8 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
                             </div>
                         </div>
@@ -467,35 +495,92 @@ function showView(view, param = null) {
         const s = tempData.find(j => j.JUGADOR === param) || hist;
         const ovr = n(s.OVERALL);
         const cardType = getCardType(ovr);
-        const fifaStats = generateFifaStats(s);  
+        const fifaStats = generateFifaStats(s); 
         const { bestMate, worstRival, stadiumStats } = getTeammatesAndRivals(param); 
         
+        const templateName = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' }[cardType];
+        const cardBg = photosMap[templateName] || "https://via.placeholder.com/300x420?text=Falta+ID";
+        const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
+        const cardHTML = `
+            <div style="width: 280px; height: 392px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto;">
+                <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+                <div style="position: absolute; top: 60px; left: 62px; text-align: center; color: ${txtColor};">
+                    <p style="font-size: 2.2rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
+                    <p style="font-size: 1rem; font-weight: 700; margin-top: 2px;">${hist.POSICION}</p>
+                </div>
+                <div style="position: absolute; top: 80px; left: 51%; transform: translateX(-50%); width: 100px; height: 115px;">
+                    <img src="${getPhoto(hist.JUGADOR)}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
+                </div>
+                <p style="position: absolute; top: 210px; left: 50%; transform: translateX(-50%); font-size: 1rem; font-weight: 900; text-transform: uppercase; color: ${txtColor}; white-space: nowrap;">${hist.JUGADOR}</p>
+                <div style="position: absolute; bottom: 65px; width: 100%; display: flex; justify-content: center; gap: 40px; color: ${txtColor}; font-weight: 900; font-size: 0.9rem; font-family: 'Oswald', sans-serif;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">RIT</span><span>${fifaStats[0]}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">TIR</span><span>${fifaStats[1]}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">PAS</span><span>${fifaStats[2]}</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">REG</span><span>${fifaStats[3]}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">DEF</span><span>${fifaStats[4]}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">FIS</span><span>${fifaStats[5]}</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
         let stadiosHtml = '';
         if (Object.keys(stadiumStats).length > 0) {
             let stadiosItems = '';
             for(const est in stadiumStats) { const st = stadiumStats[est]; stadiosItems += `<div class="stat-record"><div class="text-xl">🏟️</div><div><p class="text-xs text-gray-500 uppercase">${est}</p><p class="text-sm font-bold text-white">${st.pg}V / ${st.pj}PJ | ⚽ ${st.goles}</p></div></div>`; }
-            stadiosHtml = `<h3 class="text-xl font-black mb-3 text-white border-l-4 border-blue-500 pl-3">Estadísticas por Estadio</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">${stadiosItems}</div>`;
+            stadiosHtml = `<h3 class="text-xl font-black mb-3 text-white border-l-4 border-blue-500 pl-3 mt-8">Estadísticas por Estadio</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">${stadiosItems}</div>`;
         }
 
         app.innerHTML = `
             <button onclick="showView('players')" class="btn-back"><- Volver</button>
-            <div class="flex flex-col md:flex-row gap-6 items-center mb-8">
-                <div class="card-${cardType} rounded-2xl p-6 w-56 text-center flex-shrink-0">
-                    <div class="flex justify-between items-start"><div class="text-left"><p class="text-5xl font-black text-white">${ovr}</p><p class="text-lg font-bold ${cardType === 'toty' ? 'text-cyan-400' : 'text-yellow-400'}">${hist.POSICION}</p></div></div>
-                    <div class="w-28 h-28 bg-gray-800 rounded-full mx-auto my-4 overflow-hidden border-2 border-white/20"><img src="${getPhoto(hist.JUGADOR)}" class="w-full h-full object-cover"></div>
-                    <p class="text-xl font-bold uppercase tracking-wider text-white">${hist.JUGADOR.split(' ')[0]}</p><p class="text-sm text-gray-400 uppercase">${hist.JUGADOR.split(' ')[1] || ''}</p>
-                </div>
-                <div class="flex-grow w-full">
-                    <h2 class="text-4xl font-black text-white mb-4">${hist.JUGADOR}</h2>
-                    <div class="grid grid-cols-3 gap-3 mb-6">
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-blue-400">${n(s.GOLES)}</p><p class="text-xs text-gray-500 uppercase">Goles</p></div>
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-white">${n(s.PARTIDOS)}</p><p class="text-xs text-gray-500 uppercase">Partidos</p></div>
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-yellow-400">${n(s["MVP'S"])}</p><p class="text-xs text-gray-500 uppercase">MVPs</p></div>
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-blue-400">${n(s.VICTORIAS)}</p><p class="text-xs text-gray-500 uppercase">Victorias</p></div>
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-red-400">${n(s.DERROTAS)}</p><p class="text-xs text-gray-500 uppercase">Derrotas</p></div>
-                        <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-cyan-400">${n(s.PROMEDIO)}</p><p class="text-xs text-gray-500 uppercase">Promedio</p></div>
+            
+            <!-- NOMBRE DEL JUGADOR GRANDE ARRIBA -->
+            <h2 class="text-5xl font-black text-white mb-8 text-center md:text-left uppercase">${hist.JUGADOR}</h2>
+
+            <!-- FILA 1: Carta (Izq) + Graph (Medio) + Stats FIFA (Der) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center mb-8">
+                <div class="flex justify-center">${cardHTML}</div>
+                
+                <!-- GRÁFICO HEXAGONAL MÁS GRANDE Y CENTRADO -->
+                <div class="flex justify-center">
+                    <div style="width: 100%; max-width: 350px; aspect-ratio: 1;">
+                        <canvas id="radarChart"></canvas>
                     </div>
                 </div>
+                
+                <!-- STATS FIFA MÁS GRANDES -->
+                <div class="space-y-4 w-full max-w-xs mx-auto md:mx-0">
+                    ${[['RITMO', fifaStats[0]], ['TIRO', fifaStats[1]], ['PASE', fifaStats[2]], ['REGATE', fifaStats[3]], ['DEFENSA', fifaStats[4]], ['FISICO', fifaStats[5]]].map(stat => `
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-bold text-gray-400 w-20">${stat[0]}</span>
+                            <div class="flex-grow bg-gray-800 rounded-full h-3.5">
+                                <div class="bg-gradient-to-r from-blue-600 to-blue-400 h-3.5 rounded-full" style="width: ${stat[1]}%"></div>
+                            </div>
+                            <span class="text-xl font-black text-white w-10 text-right">${stat[1]}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- BOTONES DE TEMPORADA -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="changeProfileSeason('${hist.JUGADOR}', 'hist')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 'hist' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Histórica</button>
+                <button onclick="changeProfileSeason('${hist.JUGADOR}', 't1')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't1' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 1</button>
+                <button onclick="changeProfileSeason('${hist.JUGADOR}', 't2')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't2' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 2</button>
+            </div>
+
+            <!-- STATS REALES -->
+            <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">ESTADISTICAS</h3>
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-blue-400">${n(s.GOLES)}</p><p class="text-xs text-gray-500 uppercase">Goles</p></div>
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-white">${n(s.PARTIDOS)}</p><p class="text-xs text-gray-500 uppercase">Partidos</p></div>
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-yellow-400">${n(s["MVP'S"])}</p><p class="text-xs text-gray-500 uppercase">MVPs</p></div>
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-blue-400">${n(s.VICTORIAS)}</p><p class="text-xs text-gray-500 uppercase">Victorias</p></div>
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-red-400">${n(s.DERROTAS)}</p><p class="text-xs text-gray-500 uppercase">Derrotas</p></div>
+                <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-cyan-400">${n(s.PROMEDIO)}</p><p class="text-xs text-gray-500 uppercase">Promedio</p></div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -504,15 +589,41 @@ function showView(view, param = null) {
             </div>
 
             ${stadiosHtml}
-
-            <div class="flex gap-2 mb-6">
-                <button onclick="changeProfileSeason('${hist.JUGADOR}', 'hist')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 'hist' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Histórica</button>
-                <button onclick="changeProfileSeason('${hist.JUGADOR}', 't1')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't1' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 1</button>
-                <button onclick="changeProfileSeason('${hist.JUGADOR}', 't2')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't2' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 2</button>
-            </div>
-            <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">ESTADISTICAS</h3>
-            <div class="space-y-4">${[['RITMO', fifaStats[0]], ['TIRO', fifaStats[1]], ['PASE', fifaStats[2]], ['REGATE', fifaStats[3]], ['DEFENSA', fifaStats[4]], ['FISICO', fifaStats[5]]].map(stat => `<div class="flex items-center gap-4"><span class="text-sm font-bold text-gray-400 w-24">${stat[0]}</span><div class="flex-grow bg-gray-800 rounded-full h-3"><div class="bg-gradient-to-r from-blue-600 to-blue-400 h-3 rounded-full" style="width: ${stat[1]}%"></div></div><span class="text-lg font-black text-white w-10 text-right">${stat[1]}</span></div>`).join('')}</div>
         `;
+
+        // DIBUJAR GRÁFICO HEXAGONAL
+        if(window.radarChartInstance) window.radarChartInstance.destroy();
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        window.radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['RITMO', 'TIRO', 'PASE', 'REGATE', 'DEFENSA', 'FISICO'],
+                datasets: [{
+                    label: 'Stats',
+                    data: fifaStats,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        suggestedMin: 0, suggestedMax: 99,
+                        ticks: { display: false, stepSize: 20 },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#9ca3af', font: { size: 13, family: 'Oswald' } }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
     }
     
          else if(view === 'seasons') {
@@ -694,6 +805,24 @@ function renderAdmin() {
 
 function setAdminSection(section) { adminSection = section; adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; renderAdmin(); }
 
+function showAlert(title, message, type = 'success') {
+    const icon = type === 'success' ? '✅' : '⚠️';
+    const color = type === 'success' ? 'text-green-400' : 'text-red-400';
+    
+    const modal = document.createElement('div');
+    modal.id = 'feedback-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center">
+            <div class="text-4xl mb-4">${icon}</div>
+            <h3 class="text-2xl font-display uppercase ${color} mb-2 tracking-wide">${title}</h3>
+            <p class="text-gray-300 text-sm mb-6">${message}</p>
+            <button onclick="document.getElementById('feedback-modal').remove()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Aceptar</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
 function loadMatchIntoAdmin(id) {
     const m = DB['PARTIDOS'].find(m => m.ID_Partido == id);
     const dets = DB['DETALLE_PARTIDO'].filter(d => d.ID_Partido == id);
@@ -711,15 +840,79 @@ function loadMatchIntoAdmin(id) {
 }
 
 // --- FUNCIONES DE ADMIN ---
-async function saveNewPlayer() { const n = document.getElementById('new_player_name').value, p = document.getElementById('new_player_pos').value; if(!n||!p) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); alert("Jugador añadido!"); await loadData(); setAdminSection('menu'); } catch(e) { alert("Error."); } }
-async function deleteMatch() { const id = document.getElementById('del_match_select').value; if(!confirm("Seguro?")) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: id, Password: adminPassword }) }); alert("Partido eliminado!"); await loadData(); setAdminSection('menu'); } catch(e) { alert("Error."); } }
-async function savePhoto() { const n = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; if(!id) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: n, FotoId: id, Password: adminPassword }) }); alert("Foto guardada!"); await loadData(); setAdminSection('menu'); } catch(e) { alert("Error."); } }
-async function saveStadium() { const n = document.getElementById('new_stadium_name').value; if(!n) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addStadium', Nombre: n, Password: adminPassword }) }); alert("Estadio añadido!"); await loadData(); setAdminSection('manageStadiums'); } catch(e) { alert("Error."); } }
-async function deleteStadium(name) { if(!confirm("Eliminar "+name+"?")) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteStadium', Nombre: name, Password: adminPassword }) }); alert("Estadio eliminado!"); await loadData(); setAdminSection('manageStadiums'); } catch(e) { alert("Error."); } }
-async function editStadium(oldName) { const newName = prompt("Nuevo nombre para:", oldName); if(!newName) return; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStadium', OldName: oldName, NewName: newName, Password: adminPassword }) }); alert("Estadio actualizado!"); await loadData(); setAdminSection('manageStadiums'); } catch(e) { alert("Error."); } }
-async function saveHomeText() { const t = document.getElementById('home_text_input').value; try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveHomeText', Text: t, Password: adminPassword }) }); alert("Texto guardado!"); await loadData(); setAdminSection('menu'); } catch(e) { alert("Error."); } }
+async function saveNewPlayer() { 
+    const n = document.getElementById('new_player_name').value, p = document.getElementById('new_player_pos').value; 
+    if(!n||!p) return showAlert('Faltan datos', 'Por favor, completá nombre y posición.', 'error'); 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); 
+        showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); 
+        await loadData(); setAdminSection('menu'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
 
-function addPlayerToMatch() { const j = document.getElementById('p_jugador').value, e = document.getElementById('p_equipo').value, g = document.getElementById('p_goles').value, nt = document.getElementById('p_nota').value; if(!j) return; adminMatch.Detalle.push({ Jugador: j, Equipo: e, Goles: g, Nota: nt }); renderAdmin(); }
+async function deleteMatch() { 
+    const id = document.getElementById('del_match_select').value; 
+    if(!confirm("¿Seguro que querés borrar este partido? Esta acción no se puede deshacer.")) return; 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: id, Password: adminPassword }) }); 
+        showAlert('Partido Eliminado', 'El partido fue borrado correctamente.'); 
+        await loadData(); setAdminSection('menu'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+async function savePhoto() { 
+    const n = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; 
+    if(!id) return showAlert('Faltan datos', 'Tenés que pegar un ID de Drive.', 'error'); 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: n, FotoId: id, Password: adminPassword }) }); 
+        showAlert('Foto Guardada', 'La imagen se vinculó correctamente.'); 
+        await loadData(); setAdminSection('menu'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+async function saveStadium() { 
+    const n = document.getElementById('new_stadium_name').value; 
+    if(!n) return showAlert('Faltan datos', 'Escribí el nombre del estadio.', 'error'); 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addStadium', Nombre: n, Password: adminPassword }) }); 
+        showAlert('Estadio Añadido', 'La nueva cancha está disponible.'); 
+        await loadData(); setAdminSection('manageStadiums'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+async function deleteStadium(name) { 
+    if(!confirm("¿Eliminar "+name+"?")) return; 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteStadium', Nombre: name, Password: adminPassword }) }); 
+        showAlert('Estadio Eliminado', 'La cancha fue borrada.'); 
+        await loadData(); setAdminSection('manageStadiums'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+async function editStadium(oldName) { 
+    const newName = prompt("Nuevo nombre para:", oldName); 
+    if(!newName) return; 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStadium', OldName: oldName, NewName: newName, Password: adminPassword }) }); 
+        showAlert('Estadio Actualizado', 'El nombre fue cambiado.'); 
+        await loadData(); setAdminSection('manageStadiums'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+async function saveHomeText() { 
+    const t = document.getElementById('home_text_input').value; 
+    try { 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveHomeText', Text: t, Password: adminPassword }) }); 
+        showAlert('Texto Guardado', 'La noticia del inicio fue actualizada.'); 
+        await loadData(); setAdminSection('menu'); 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+}
+
+function addPlayerToMatch() { 
+    const j = document.getElementById('p_jugador').value, e = document.getElementById('p_equipo').value, g = document.getElementById('p_goles').value, nt = document.getElementById('p_nota').value; 
+    if(!j) return showAlert('Faltan datos', 'Elegí un jugador.', 'error'); 
+    adminMatch.Detalle.push({ Jugador: j, Equipo: e, Goles: g, Nota: nt }); renderAdmin(); 
+}
 function removePlayerFromMatch(i) { adminMatch.Detalle.splice(i, 1); renderAdmin(); }
 
 async function saveMatch() { 
@@ -730,7 +923,7 @@ async function saveMatch() {
     adminMatch.Goles_E1 = parseInt(document.getElementById('m_g1').value) || 0; 
     adminMatch.Goles_E2 = parseInt(document.getElementById('m_g2').value) || 0; 
     
-    if(!adminMatch.Detalle.length) return; 
+    if(!adminMatch.Detalle.length) return showAlert('Faltan datos', 'Agregá al menos un jugador.', 'error'); 
     
     adminMatch.Detalle.forEach(d => {
         const teamNum = String(d.Equipo).includes('1') ? 1 : 2;
@@ -744,20 +937,20 @@ async function saveMatch() {
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: 'saveMatch', ...adminMatch, Password: adminPassword}) }); 
         const data = await res.json(); 
         if(data.status === 'success') { 
-            alert("Partido guardado!"); 
+            showAlert('Partido Cargado', 'El resultado se guardó en el Excel.'); 
             adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; 
             await loadData(); 
             showView('home'); 
         } else { 
-            alert("Error del servidor: " + (data.message || "Desconocido")); 
+            showAlert('Error del servidor', data.message || "Desconocido", 'error'); 
         } 
     } catch(e) { 
-        alert("Error de red o de código: " + e.message); 
+        showAlert('Error', 'No se pudo conectar.', 'error'); 
     } 
 }
 
 async function saveEditedMatch() {
-    if(!adminMatch.ID_Partido) return alert("Error: No se seleccionó ningún partido para editar.");
+    if(!adminMatch.ID_Partido) return showAlert('Error', 'No se seleccionó ningún partido para editar.', 'error');
     
     if(!adminPassword) {
         adminPassword = prompt("Ingresá nuevamente la clave Admin para guardar:");
@@ -771,7 +964,7 @@ async function saveEditedMatch() {
     adminMatch.Goles_E1 = parseInt(document.getElementById('m_g1').value) || 0; 
     adminMatch.Goles_E2 = parseInt(document.getElementById('m_g2').value) || 0; 
     
-    if(!adminMatch.Detalle || adminMatch.Detalle.length === 0) return alert("El partido debe tener al menos un jugador cargado."); 
+    if(!adminMatch.Detalle || adminMatch.Detalle.length === 0) return showAlert('Faltan datos', 'El partido debe tener al menos un jugador cargado.', 'error'); 
     
     adminMatch.Detalle.forEach(d => {
         const teamNum = String(d.Equipo).includes('1') ? 1 : 2;
@@ -786,15 +979,15 @@ async function saveEditedMatch() {
         const data = await res.json(); 
         
         if(data.status === 'success') { 
-            alert("Partido actualizado correctamente!"); 
+            showAlert('Partido Actualizado', 'Los cambios se guardaron correctamente.'); 
             adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; 
             await loadData(); 
             showView('home'); 
         } else { 
-            alert("Error del servidor: " + (data.message || "Desconocido")); 
+            showAlert('Error del servidor', data.message || "Desconocido", 'error'); 
         } 
     } catch(e) { 
-        alert("Error de red o de código: " + e.message); 
+        showAlert('Error', 'No se pudo conectar.', 'error'); 
     } 
 }
 
@@ -875,7 +1068,52 @@ function changeProfileSeason(playerName, season) { currentProfileSeason = season
 function updateDuel(playerNum, name) { if(playerNum === 1) duelP1Name = name; else duelP2Name = name; showView('duels'); }
 function changeSeason(temp) { currentSeason = temp; showView('seasons'); }
 function changeDuelSeason(temp) { currentDuelSeason = temp; showView('duels'); }
-async function checkAdmin() { const pass = prompt("Clave Admin:"); if(!pass) return; try { const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'checkAdmin', Password: pass }) }); const data = await res.json(); if(data.status === 'success' && data.isAdmin) { adminPassword = pass; adminSection = 'menu'; showView('admin'); } else { alert("Clave incorrecta."); } } catch(e) { alert("Error."); } }
+async function checkAdmin() {
+    if (adminPassword) { 
+        adminSection = 'menu'; 
+        showView('admin'); 
+        return; 
+    }
+
+    // Crear Modal Estético
+    const modal = document.createElement('div');
+    modal.id = 'admin-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center">
+            <h3 class="text-2xl font-display uppercase text-blue-400 mb-2 tracking-wide">🔒 Acceso Admin</h3>
+            <p class="text-gray-500 text-sm mb-6">Ingresá la clave para gestionar la liga</p>
+            <input type="password" id="admin-pass-input" placeholder="Contraseña" class="w-full bg-gray-900 text-white p-3 rounded-xl mb-4 outline-none border border-white/10 text-center text-lg tracking-widest">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('admin-modal').remove()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                <button onclick="submitAdminPass()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Ingresar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('admin-pass-input').focus();
+    document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
+}
+
+async function submitAdminPass() {
+    const pass = document.getElementById('admin-pass-input').value;
+    document.getElementById('admin-modal').remove();
+    if(!pass) return;
+    
+    try { 
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'checkAdmin', Password: pass }) }); 
+        const data = await res.json(); 
+        if(data.status === 'success' && data.isAdmin) { 
+            adminPassword = pass; 
+            adminSection = 'menu'; 
+            showView('admin'); 
+        } else { 
+            alert("Clave incorrecta."); 
+        } 
+    } catch(e) { 
+        alert("Error de conexión."); 
+    } 
+}
 
 function renderDuel() {
     const tempData = getSeasonData(currentDuelSeason);
