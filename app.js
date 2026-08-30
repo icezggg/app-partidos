@@ -1029,19 +1029,23 @@ function generateTeams() {
         // Buscamos en la temporada seleccionada
         let pData = tempData.find(p => p.JUGADOR === name);
         
-        // LÓGICA FALLBACK: Si no tiene datos en esa temporada, usamos la Histórica
+        // LÓGICA FALLBACK INTELIGENTE
         if(!pData) pData = histData.find(p => p.JUGADOR === name) || {};
         
         // Obtenemos el valor según el criterio elegido
         let val = n(pData[teamGenCriteria]);
         
-        // Si el promedio es 0 (no jugó), usamos el Overall para no romper el balance
-        if(val === 0 && teamGenCriteria === 'PROMEDIO') {
-            val = n(pData.OVERALL);
+        // Si el valor es 0 (no jugó o no tiene stat)
+        if(val === 0) {
+            if(teamGenCriteria === 'PROMEDIO') {
+                // Si no tiene promedio, probamos con su Overall de esa temporada
+                val = n(pData.OVERALL);
+            }
+            // Si sigue siendo 0, probamos con el Overall Histórico
+            if(val === 0) val = n(histData.find(p => p.JUGADOR === name)?.OVERALL || 0);
+            // Si el jugador NO EXISTE en ningún lado (Nuevo), le damos un 75 estándar para no perjudicarlo
+            if(val === 0) val = 75;
         }
-        
-        // Último fallback: 50
-        if(val === 0) val = 50;
         
         return { name, val: val };
     }).sort((a,b) => b.val - a.val);
