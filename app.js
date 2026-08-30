@@ -8,6 +8,7 @@ let teamGenPlayers = [];
 let cardGenData = { name: '', ovr: 75, pos: 'DC', stats: { rit: 75, tir: 75, pas: 75, reg: 75, def: 75, fis: 75 }, photo: '' };
 let teamGenSeason = 'hist';
 let teamGenCriteria = 'OVERALL';
+
 const n = (val) => {
     if (!val) return 0;
     if (typeof val === 'number') return val;
@@ -29,20 +30,15 @@ function getSeasonData(seasonKey) {
 
 const generateFifaStats = (p) => {
     if(!p) return [50, 50, 50, 50, 50, 50];
-    
-    // Buscamos los datos con fallback por si el Excel tiene espacios en los títulos
     const pj = Math.max(1, n(p.PARTIDOS || p.PJ || p['PARTIDOS ']));
     const victorias = n(p.VICTORIAS || p.PG || p['VICTORIAS ']);
     const goles = n(p.GOLES || p.Goles || p.G || p['GOLES ']);
     const mvps = n(p["MVP'S"] || p.MVP || p.MVPS || p["MVP'S "]);
     const promedio = n(p.PROMEDIO || p.Promedio || p.Prom || p['PROMEDIO ']);
-    
     const wr = victorias / pj; 
     const ratio = goles / pj; 
     const wrFactor = wr > 1 ? (wr / 100) : wr;
-    
     const calc = (val, min, max) => Math.min(max, Math.max(min, Math.round(val)));
-
     const pos = String(p.POSICION || p['POSICION '] || 'DC').toUpperCase();
     let mod = [0, 0, 0, 0, 0, 0];
     if (pos.includes('GK')) mod = [-10, -30, -10, -20, 15, 0];
@@ -50,15 +46,12 @@ const generateFifaStats = (p) => {
     else if (pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) mod = [0, 0, 10, 5, 0, 0];
     else if (pos.includes('W') || pos.includes('LW') || pos.includes('RW')) mod = [10, 0, 0, 10, -15, -5];
     else if (pos.includes('DC')) mod = [0, 10, -5, 5, -20, 10];
-
-    // TUS FÓRMULAS CON LOS MODIFICADORES APLICADOS
     const rit = calc(45 + (promedio * 3) + (wrFactor * 10) + ((mvps / pj) * 15) + mod[0], 50, 99);
     const tir = calc(40 + (ratio * 22) + ((mvps / pj) * 12) + (promedio * 1.5) + mod[1], 50, 99);
     const pas = calc(42 + (promedio * 3.5) + (wrFactor * 12) + mod[2], 50, 99);
     const reg = calc(42 + (promedio * 3) + ((mvps / pj) * 20) + (ratio * 5) + mod[3], 50, 99);
     const def = calc(50 + (promedio * 3.5) + (wrFactor * 10) - (ratio * 12) + mod[4], 40, 99);
     const fis = calc(45 + (promedio * 3.2) + (wrFactor * 10) + (pj * 0.6) + (mvps * 1.2) + mod[5], 50, 99);
-    
     return [rit, tir, pas, reg, def, fis];
 };
 
@@ -69,13 +62,12 @@ const formatDate = (dateStr) => {
 
 const getPitchX = (posStr, team) => {
     const pos = String(posStr || 'DC').toUpperCase();
-    // Equipo 1 defiende izquierda (0-50%), Equipo 2 defiende derecha (50-100%)
     let x = team === 1 ? 25 : 75;
     if(pos.includes('GK')) x = team === 1 ? 5 : 95;
     else if(pos.includes('DF')) x = team === 1 ? 15 : 85;
     else if(pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) x = team === 1 ? 30 : 70;
     else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 35 : 65;
-    else if(pos.includes('DC')) x = team === 1 ? 42 : 58; // Los DC quedan al borde del mediocampo
+    else if(pos.includes('DC')) x = team === 1 ? 42 : 58;
     return x;
 };
 
@@ -91,7 +83,6 @@ function calculateRecords() {
     const details = DB['DETALLE_PARTIDO'] || [];
     let records = { biggestWin: null, winStreak: { name: '-', val: 0 }, bestForm: { name: '-', val: 0 } };
     let maxDiff = 0, maxTotal = 0;
-
     matches.forEach(m => {
         const g1 = n(m.Goles_E1 || m['Goles E1'] || m['Goles Equipo 1']);
         const g2 = n(m.Goles_E2 || m['Goles E2'] || m['Goles Equipo 2']);
@@ -99,16 +90,13 @@ function calculateRecords() {
         const total = g1 + g2;
         if (diff > maxDiff || (diff === maxDiff && total > maxTotal)) { maxDiff = diff; maxTotal = total; records.biggestWin = m; }
     });
-
     const matchDetailsMap = {};
     details.forEach(d => { if(!matchDetailsMap[d.ID_Partido]) matchDetailsMap[d.ID_Partido] = []; matchDetailsMap[d.ID_Partido].push(d); });
-
     const playerHistory = {};
     matches.forEach(m => {
         const dets = matchDetailsMap[m.ID_Partido] || [];
         const g1 = n(m.Goles_E1 || m['Goles E1'] || m['Goles Equipo 1']);
         const g2 = n(m.Goles_E2 || m['Goles E2'] || m['Goles Equipo 2']);
-        
         dets.forEach(d => {
             if(!playerHistory[d.Jugador]) playerHistory[d.Jugador] = [];
             const team = String(d.Equipo).includes('1') ? 1 : 2;
@@ -120,7 +108,6 @@ function calculateRecords() {
             playerHistory[d.Jugador].push({ res: String(res).trim(), nota: n(d.Nota) });
         });
     });
-
     for(const player in playerHistory) {
         const history = playerHistory[player];
         let streak = 0;
@@ -129,7 +116,6 @@ function calculateRecords() {
             else break; 
         }
         if(streak > records.winStreak.val) records.winStreak = { name: player, val: streak };
-
         const last3 = history.slice(-3);
         if(last3.length > 0) {
             const avg = last3.reduce((sum, p) => sum + p.nota, 0) / last3.length;
@@ -145,25 +131,19 @@ function getTeammatesAndRivals(playerName) {
     let teammates = {}; let rivals = {}; let stadiumStats = {};
     const matchDetailsMap = {};
     details.forEach(d => { if(!matchDetailsMap[d.ID_Partido]) matchDetailsMap[d.ID_Partido] = []; matchDetailsMap[d.ID_Partido].push(d); });
-
     matches.forEach(m => {
         const dets = matchDetailsMap[m.ID_Partido] || [];
         const me = dets.find(d => d.Jugador === playerName);
         if(!me) return;
-        
         const myTeam = String(me.Equipo).includes('1') ? 1 : 2;
         const g1 = n(m.Goles_E1 || m['Goles E1'] || m['Goles Equipo 1']);
         const g2 = n(m.Goles_E2 || m['Goles E2'] || m['Goles Equipo 2']);
-        
         let iWon = false;
         if (myTeam === 1) iWon = g1 > g2;
         else iWon = g2 > g1;
-
         let iLost = false;
         if (myTeam === 1) iLost = g1 < g2;
         else iLost = g2 < g1;
-
-        // BÚSQUEDA INTELIGENTE DEL ESTADIO
         let est = m.Estadio || m.Cancha || m['Estadio '] || m.ESTADIO || '';
         if(!est) {
             for(let k in m) {
@@ -173,10 +153,8 @@ function getTeammatesAndRivals(playerName) {
             }
         }
         if(!est) est = 'St. Diego';
-
-         if(!stadiumStats[est]) stadiumStats[est] = { pj: 0, pg: 0, goles: 0 };
+        if(!stadiumStats[est]) stadiumStats[est] = { pj: 0, pg: 0, goles: 0 };
         stadiumStats[est].pj++; if(iWon) stadiumStats[est].pg++; stadiumStats[est].goles += n(me.Goles);
-
         dets.forEach(d => {
             if(d.Jugador === playerName) return;
             const theirTeam = String(d.Equipo).includes('1') ? 1 : 2;
@@ -189,7 +167,6 @@ function getTeammatesAndRivals(playerName) {
             }
         });
     });
-
     let bestMate = { name: '-', wr: 0 };
     for(const t in teammates) {
         if(teammates[t].total >= 2 && teammates[t].wins > 0) {
@@ -197,7 +174,6 @@ function getTeammatesAndRivals(playerName) {
             if(wr > bestMate.wr) bestMate = { name: t, wr: wr.toFixed(0) };
         }
     }
-    
     let worstRival = { name: '-', lr: 0 };
     for(const r in rivals) {
         if(rivals[r].total >= 2 && rivals[r].losses > 0) {
@@ -210,38 +186,31 @@ function getTeammatesAndRivals(playerName) {
 
 async function loadData() {
     try {
-        // 1. Intentamos leer los datos guardados en la memoria del navegador (Caché)
         const cachedDB = localStorage.getItem('tecSportsDB');
         if(cachedDB) {
             DB = JSON.parse(cachedDB);
             processPhotos(DB);
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
-            showView('home'); // Renderiza instantáneo
+            showView('home');
         }
-        
-        // 2. En segundo plano, pedimos los datos nuevos a Google
-        const res = await fetch(API_URL + '?t=' + Date.now()); // El "?t=" evita caché de red
+        const res = await fetch(API_URL + '?t=' + Date.now());
         DB = await res.json();
-        localStorage.setItem('tecSportsDB', JSON.stringify(DB)); // Guardamos en caché
+        localStorage.setItem('tecSportsDB', JSON.stringify(DB));
         processPhotos(DB);
-        
-        // Si no había caché, mostramos la web ahora
         if(!cachedDB) {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
             showView('home');
         } else {
-            // Si ya estaba renderizada, la actualizamos silenciosamente
             const currentView = document.querySelector('.sidebar-link.active')?.getAttribute('onclick').match(/'([^']+)'/)[1] || 'home';
             showView(currentView);
         }
     } catch (e) {
-        document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión. Usá datos guardados si hay.</p>';
+        document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión.</p>';
     }
 }
 
-// Función para procesar fotos rápidamente
 function processPhotos(dbData) {
     photosMap = {};
     if(dbData['FOTOS']) {
@@ -270,7 +239,6 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
-        
         const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
 
         let matchCardHTML = '<div class="glass p-8 rounded-2xl border border-white/10 h-full flex items-center justify-center"><p class="text-gray-500">No hay partidos cargados aún.</p></div>';
@@ -278,7 +246,6 @@ function showView(view, param = null) {
             const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
             const e1 = details.filter(d => String(d.Equipo).includes('1'));
             const e2 = details.filter(d => String(d.Equipo).includes('2'));
-            
             const formatScorers = (teamArray) => {
                 const scorers = teamArray.filter(p => n(p.Goles) > 0).map(p => `${p.Jugador} (${n(p.Goles)})`);
                 return scorers.length > 0 ? scorers.join('<br>') : 'Sin goles';
@@ -354,8 +321,6 @@ function showView(view, param = null) {
                         </div>
                     </div>
                 </div>
-
-                <!-- PLACAS CLICKEABLES -->
                 <div class="flex flex-col md:flex-row justify-center gap-6">
                     <div onclick="${records.biggestWin ? `showView('matchDetail', '${records.biggestWin.ID_Partido}')` : ''}" class="stat-record w-full md:w-1/3 justify-center glow-yellow bg-black/40 cursor-pointer hover:scale-105 transition">
                         <div class="text-2xl">🥇</div>
@@ -370,8 +335,6 @@ function showView(view, param = null) {
                         <div class="text-center"><p class="text-xs text-gray-500 uppercase">Mejor Forma</p><p class="text-base font-bold text-cyan-400">${records.bestForm.name} (${records.bestForm.val})</p></div>
                     </div>
                 </div>
-
-                <!-- TABLA COMPLETA CLICKEABLE -->
                 <div>
                     <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones</h2>
                     <div class="glass rounded-2xl overflow-hidden border border-white/10">
@@ -399,7 +362,6 @@ function showView(view, param = null) {
         const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == param);
         const e1 = details.filter(d => String(d.Equipo).includes('1'));
         const e2 = details.filter(d => String(d.Equipo).includes('2'));
-
         const groupAndMap = (team, teamNum) => {
             const groups = {};
             team.forEach(p => {
@@ -421,7 +383,6 @@ function showView(view, param = null) {
             }
             return html;
         };
-
         app.innerHTML = `
             <button onclick="showView('home')" class="btn-back"><- Volver</button>
             <div class="glass rounded-2xl p-6 mb-8 border border-white/10 text-center relative">
@@ -453,7 +414,6 @@ function showView(view, param = null) {
         app.innerHTML = `
             <h1 class="text-5xl font-black text-white uppercase mb-1">Plantel</h1>
             <p class="text-gray-500 mb-6">Toca un jugador para ver su perfil completo</p>
-            
             <div class="glass p-4 rounded-xl mb-8 flex flex-col md:flex-row items-center gap-4">
                 <div class="flex items-center gap-3 w-full md:flex-grow">
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -469,7 +429,6 @@ function showView(view, param = null) {
                     </select>
                 </div>
             </div>
-
             <div id="players-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 ${renderPlayersGrid('', 'default')}
             </div>
@@ -484,7 +443,6 @@ function showView(view, param = null) {
         const cardType = getCardType(ovr);
         const fifaStats = generateFifaStats(s); 
         const { bestMate, worstRival, stadiumStats } = getTeammatesAndRivals(param); 
-        
         const templateName = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' }[cardType];
         const cardBg = photosMap[templateName] || "https://via.placeholder.com/300x420?text=Falta+ID";
         const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
@@ -513,32 +471,22 @@ function showView(view, param = null) {
                 </div>
             </div>
         `;
-
         let stadiosHtml = '';
         if (Object.keys(stadiumStats).length > 0) {
             let stadiosItems = '';
             for(const est in stadiumStats) { const st = stadiumStats[est]; stadiosItems += `<div class="stat-record"><div class="text-xl">🏟️</div><div><p class="text-xs text-gray-500 uppercase">${est}</p><p class="text-sm font-bold text-white">${st.pg}V / ${st.pj}PJ | ⚽ ${st.goles}</p></div></div>`; }
             stadiosHtml = `<h3 class="text-xl font-black mb-3 text-white border-l-4 border-blue-500 pl-3 mt-8">Estadísticas por Estadio</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">${stadiosItems}</div>`;
         }
-
         app.innerHTML = `
             <button onclick="showView('players')" class="btn-back"><- Volver</button>
-            
-            <!-- NOMBRE DEL JUGADOR GRANDE ARRIBA -->
             <h2 class="text-5xl font-black text-white mb-8 text-center md:text-left uppercase">${hist.JUGADOR}</h2>
-
-            <!-- FILA 1: Carta (Izq) + Graph (Medio) + Stats FIFA (Der) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center mb-8">
                 <div class="flex justify-center">${cardHTML}</div>
-                
-                <!-- GRÁFICO HEXAGONAL MÁS GRANDE Y CENTRADO -->
                 <div class="flex justify-center">
                     <div style="width: 100%; max-width: 350px; aspect-ratio: 1;">
                         <canvas id="radarChart"></canvas>
                     </div>
                 </div>
-                
-                <!-- STATS FIFA MÁS GRANDES -->
                 <div class="space-y-4 w-full max-w-xs mx-auto md:mx-0">
                     ${[['RITMO', fifaStats[0]], ['TIRO', fifaStats[1]], ['PASE', fifaStats[2]], ['REGATE', fifaStats[3]], ['DEFENSA', fifaStats[4]], ['FISICO', fifaStats[5]]].map(stat => `
                         <div class="flex items-center gap-4">
@@ -551,15 +499,11 @@ function showView(view, param = null) {
                     `).join('')}
                 </div>
             </div>
-
-            <!-- BOTONES DE TEMPORADA -->
             <div class="flex gap-2 mb-6">
                 <button onclick="changeProfileSeason('${hist.JUGADOR}', 'hist')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 'hist' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Histórica</button>
                 <button onclick="changeProfileSeason('${hist.JUGADOR}', 't1')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't1' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 1</button>
                 <button onclick="changeProfileSeason('${hist.JUGADOR}', 't2')" class="flex-1 py-3 rounded-xl font-bold ${currentProfileSeason === 't2' ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">Temp 2</button>
             </div>
-
-            <!-- STATS REALES -->
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">ESTADISTICAS</h3>
             <div class="grid grid-cols-3 gap-3 mb-6">
                 <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-blue-400">${n(s.GOLES)}</p><p class="text-xs text-gray-500 uppercase">Goles</p></div>
@@ -569,16 +513,12 @@ function showView(view, param = null) {
                 <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-red-400">${n(s.DERROTAS)}</p><p class="text-xs text-gray-500 uppercase">Derrotas</p></div>
                 <div class="glass p-3 rounded-xl text-center"><p class="text-2xl font-black text-cyan-400">${n(s.PROMEDIO)}</p><p class="text-xs text-gray-500 uppercase">Promedio</p></div>
             </div>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="stat-record"><div class="text-2xl">🤝</div><div><p class="text-xs text-gray-500 uppercase">Mejor Compañero</p><p class="text-lg font-bold text-blue-400">${bestMate.name} (${bestMate.wr}% WR)</p></div></div>
                 <div class="stat-record"><div class="text-2xl">😈</div><div><p class="text-xs text-gray-500 uppercase">Peor Rival</p><p class="text-lg font-bold text-red-400">${worstRival.name} (${worstRival.lr}% Derrotas)</p></div></div>
             </div>
-
             ${stadiosHtml}
         `;
-
-        // DIBUJAR GRÁFICO HEXAGONAL
         if(window.radarChartInstance) window.radarChartInstance.destroy();
         const ctx = document.getElementById('radarChart').getContext('2d');
         window.radarChartInstance = new Chart(ctx, {
@@ -586,37 +526,21 @@ function showView(view, param = null) {
             data: {
                 labels: ['RITMO', 'TIRO', 'PASE', 'REGATE', 'DEFENSA', 'FISICO'],
                 datasets: [{
-                    label: 'Stats',
-                    data: fifaStats,
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                    label: 'Stats', data: fifaStats,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 2,
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)', pointBorderColor: '#fff', pointHoverBackgroundColor: '#fff', pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
                 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: true,
-                scales: {
-                    r: {
-                        suggestedMin: 0, suggestedMax: 99,
-                        ticks: { display: false, stepSize: 20 },
-                        grid: { color: 'rgba(255,255,255,0.1)' },
-                        angleLines: { color: 'rgba(255,255,255,0.1)' },
-                        pointLabels: { color: '#9ca3af', font: { size: 13, family: 'Oswald' } }
-                    }
-                },
+                scales: { r: { suggestedMin: 0, suggestedMax: 99, ticks: { display: false, stepSize: 20 }, grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, pointLabels: { color: '#9ca3af', font: { size: 13, family: 'Oswald' } } } },
                 plugins: { legend: { display: false } }
             }
         });
     }
-    
-else if(view === 'seasons') {
+    else if(view === 'seasons') {
         const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
         const matches = (DB['PARTIDOS'] || []).filter(m => currentSeason === 'hist' ? true : String(m.Temporada) === String(currentSeason));
-        
         let maxOvr = {n:'-', v:0}, maxGoles = {n:'-', v:0}, maxPj = {n:'-', v:0}, maxProm = {n:'-', v:0}, maxPg = {n:'-', v:0}, maxPp = {n:'-', v:0}, maxMvp = {n:'-', v:0};
         tempData.forEach(p => {
             if(n(p.OVERALL) > maxOvr.v) maxOvr = {n:p.JUGADOR, v:n(p.OVERALL)};
@@ -627,11 +551,9 @@ else if(view === 'seasons') {
             if(n(p.DERROTAS) > maxPp.v) maxPp = {n:p.JUGADOR, v:n(p.DERROTAS)};
             if(n(p["MVP'S"]) > maxMvp.v) maxMvp = {n:p.JUGADOR, v:n(p["MVP'S"])};
         });
-
         app.innerHTML = `
             <h1 class="text-5xl font-black text-white uppercase mb-6">Temporadas</h1>
             <div class="flex gap-2 mb-8">${['hist', '1', '2'].map(t => `<button onclick="changeSeason('${t}')" class="flex-1 py-3 rounded-xl font-bold transition ${currentSeason == t ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">${t === 'hist' ? 'Histórica' : 'Temp ' + t}</button>`).join('')}</div>
-            
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-yellow-500 pl-3">Placas de la Temporada</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 <div class="stat-record bg-cyan-500/10"><div class="text-2xl">💎</div><div><p class="text-xs text-gray-500 uppercase">Mejor Overall</p><p class="text-lg font-bold text-cyan-400">${maxOvr.n} (${maxOvr.v})</p></div></div>
@@ -642,24 +564,22 @@ else if(view === 'seasons') {
                 <div class="stat-record bg-red-500/10"><div class="text-2xl">🥉</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Perdidos</p><p class="text-lg font-bold text-red-400">${maxPp.n} (${maxPp.v})</p></div></div>
                 <div class="stat-record bg-yellow-500/10"><div class="text-2xl">🎩</div><div><p class="text-xs text-gray-500 uppercase">Máximo MVP</p><p class="text-lg font-bold text-yellow-400">${maxMvp.n} (${maxMvp.v})</p></div></div>
             </div>
-
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Partidos Jugados</h3>
             <div class="space-y-3 mb-8">${matches.length === 0 ? '<p class="text-gray-500">No hay partidos.</p>' : matches.map(p => `<div onclick="showView('matchDetail', '${p.ID_Partido}')" class="glass p-4 rounded-xl flex justify-between items-center hover:bg-white/5 cursor-pointer border border-white/5"><div><p class="text-xs text-gray-500">${formatDate(p.Fecha)} | ${p.Estadio || 'St. Diego'}</p><p class="text-sm font-bold text-white">Equipo 1 vs Equipo 2</p></div><div class="flex items-center gap-4"><span class="text-2xl font-black text-white">${p.Goles_E1} - ${p.Goles_E2}</span></div></div>`).join('')}</div>
-            
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Estadísticas Individuales</h3>
             <div class="glass rounded-2xl overflow-x-auto border border-white/10">
                 <table class="w-full text-sm whitespace-nowrap">
                     <thead class="bg-white/5 text-gray-500 uppercase text-xs">
                         <tr>
-                            <th class="p-3 text-left cursor-pointer hover:text-white" onclick="sortSeasonsTable('JUGADOR')">Jugador ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PARTIDOS')">PJ ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('VICTORIAS')">PG ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('EMPATES')">PE ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('RATIO GOLEADOR')">Ratio ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP\\'S')">MVP ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
+                            <th class="p-3 text-left cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('JUGADOR')">Jugador ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PARTIDOS')">PJ ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('VICTORIAS')">PG ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('EMPATES')">PE ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('RATIO')">Ratio ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('MVP')">MVP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
                         </tr>
                     </thead>
                     <tbody id="seasons-tbody">
@@ -668,7 +588,7 @@ else if(view === 'seasons') {
                 </table>
             </div>
         `;
-}
+    }
     else if(view === 'duels') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
@@ -685,13 +605,11 @@ else if(view === 'seasons') {
             <div id="duel-content">${duelP1Name && duelP2Name ? renderDuel() : '<p class="text-center text-gray-600 mt-10">Selecciona ambos jugadores...</p>'}</div>
         `;
     }
-     else if(view === 'teamGen') {
+    else if(view === 'teamGen') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
             <h1 class="text-5xl font-black text-white uppercase mb-6">⚽ Generador de Equipos</h1>
             <div class="glass p-6 rounded-2xl border border-white/10 mb-6">
-                
-                <!-- OPCIONES DE GENERACIÓN -->
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <div>
                         <label class="text-xs text-gray-400 uppercase font-bold">Temporada</label>
@@ -709,7 +627,6 @@ else if(view === 'seasons') {
                         </select>
                     </div>
                 </div>
-
                 <h3 class="text-lg font-bold mb-4 text-gray-300">Seleccionar Jugadores (${teamGenPlayers.length})</h3>
                 <div class="flex gap-2 mb-4">
                     <select id="gen_select" class="glass p-3 rounded-xl bg-gray-900 text-white flex-grow"><option value="">Elegir jugador...</option>${histData.map(p => `<option value="${p.JUGADOR}" ${teamGenPlayers.includes(p.JUGADOR) ? 'disabled' : ''}>${p.JUGADOR}</option>`).join('')}</select>
@@ -753,26 +670,24 @@ else if(view === 'seasons') {
         updateCardPreview();
     }
     else if(view === 'admin') { renderAdmin(); }
-    window.scrollTo(0, 0);
     
-    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA
+    window.scrollTo(0, 0);
     if (!window.isRouting) {
         let url = BASE_URL + view;
         if (param) url += '/' + encodeURIComponent(param);
         window.history.pushState({ view, param: param || null }, '', url);
     }
 }
-// Genera el HTML de la grilla de jugadores según la búsqueda
+
+// --- FUNCIONES AUXILIARES GLOBALES (FUERA DE SHOWVIEW) ---
+
 function renderPlayersGrid(query = '', sortBy = 'default') {
     let histData = DB['HISTORICA'] || [];
     let dataToRender = histData.filter(p => String(p.JUGADOR).toLowerCase().includes(query.toLowerCase()));
-
     if (sortBy === 'name') dataToRender.sort((a,b) => String(a.JUGADOR).localeCompare(String(b.JUGADOR)));
     else if (sortBy === 'ovr') dataToRender.sort((a,b) => n(b.OVERALL) - n(a.OVERALL));
     else if (sortBy === 'pos') dataToRender.sort((a,b) => String(a.POSICION).localeCompare(String(b.POSICION)));
-
     if (dataToRender.length === 0) return '<p class="text-gray-500 text-center col-span-4 mt-10">No se encontraron jugadores...</p>';
-
     return dataToRender.map(p => `
         <div onclick="showView('playerProfile', '${p.JUGADOR}')" class="glass p-4 rounded-2xl text-center hover:border-blue-500/50 transition cursor-pointer flex flex-col items-center justify-center">
             <div class="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-4 ${n(p.OVERALL)>=94 ? 'border-cyan-400' : n(p.OVERALL)>=75 ? 'border-yellow-400' : n(p.OVERALL)>=68 ? 'border-gray-300' : 'border-orange-700'}">
@@ -798,14 +713,48 @@ function handlePlayerSortChange() {
     document.getElementById('players-grid').innerHTML = renderPlayersGrid(query, sortBy);
 }
 
+let seasonsSortKey = null;
+let seasonsSortDir = 'desc';
+
+function sortSeasonsTable(key) {
+    let excelKey = key;
+    if (key === 'MVP') excelKey = "MVP'S";
+    if (key === 'RATIO') excelKey = 'RATIO GOLEADOR';
+    if (seasonsSortKey === excelKey) {
+        seasonsSortDir = seasonsSortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+        seasonsSortKey = excelKey;
+        seasonsSortDir = (key === 'JUGADOR') ? 'asc' : 'desc';
+    }
+    const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
+    document.getElementById('seasons-tbody').innerHTML = renderSeasonsTableBody(tempData);
+}
+
+function renderSeasonsTableBody(tempData) {
+    let data = tempData.filter(p => n(p.PARTIDOS) > 0);
+    if (seasonsSortKey) {
+        data.sort((a, b) => {
+            let valA = a[seasonsSortKey];
+            let valB = b[seasonsSortKey];
+            if (seasonsSortKey === 'JUGADOR') {
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return seasonsSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                valA = n(valA);
+                valB = n(valB);
+                return seasonsSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+        });
+    }
+    return data.map(p => `<tr class="border-t border-white/5 hover:bg-white/5 cursor-pointer" onclick="showView('playerProfile', '${p.JUGADOR}')"><td class="p-3 font-semibold text-white">${p.JUGADOR}</td><td class="p-3 text-center text-gray-400">${n(p.PARTIDOS)}</td><td class="p-3 text-center text-blue-400">${n(p.VICTORIAS)}</td><td class="p-3 text-center text-gray-400">${n(p.EMPATES)}</td><td class="p-3 text-center text-red-400">${n(p.DERROTAS)}</td><td class="p-3 text-center font-bold text-blue-400">${n(p.GOLES)}</td><td class="p-3 text-center text-gray-400">${n(p["RATIO GOLEADOR"]).toFixed(2)}</td><td class="p-3 text-center text-yellow-400">${n(p["MVP'S"])}</td><td class="p-3 text-center text-cyan-400">${n(p.PROMEDIO).toFixed(2)}</td></tr>`).join('');
+}
 
 function renderAdmin() {
     const app = document.getElementById('app-view');
-    // TOMAMOS LOS ESTADIOS DE LA HOJA ESTADIOS Y TAMBIÉN DE LOS PARTIDOS EXISTENTES PARA NO PERDER NINGUNO
     let estadios = DB['ESTADIOS'] || [];
     (DB['PARTIDOS'] || []).forEach(m => { if(m.Estadio && !estadios.includes(m.Estadio)) estadios.push(m.Estadio); });
     if(estadios.length === 0) estadios = ['St. Diego'];
-    
     if(adminSection === 'menu') {
         app.innerHTML = `<h1 class="text-4xl font-black text-white mb-2">Panel de <span class="text-blue-400">Administración</span></h1><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div onclick="setAdminSection('loadMatch')" class="admin-card"><h3 class="text-blue-400">⚽ Cargar Partido</h3></div><div onclick="setAdminSection('editMatch')" class="admin-card"><h3 class="text-blue-400">✏️ Editar Partido</h3></div><div onclick="setAdminSection('addPlayer')" class="admin-card"><h3 class="text-blue-400">👤 Añadir Jugador</h3></div><div onclick="setAdminSection('deleteMatch')" class="admin-card"><h3 class="text-red-400">🗑️ Eliminar Partido</h3></div><div onclick="setAdminSection('updatePhoto')" class="admin-card"><h3 class="text-blue-400">📷 Gestionar Fotos</h3></div><div onclick="setAdminSection('manageStadiums')" class="admin-card"><h3 class="text-blue-400">🏟️ Gestionar Estadios</h3></div><div onclick="setAdminSection('editHome')" class="admin-card"><h3 class="text-blue-400">📝 Editor INICIO</h3></div></div>`;
     } 
@@ -815,7 +764,6 @@ function renderAdmin() {
             app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">✏️ Editar Partido</h1><div class="admin-card space-y-4"><select onchange="loadMatchIntoAdmin(this.value)" id="edit_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a editar...</option>${DB['PARTIDOS'].map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select></div>`;
             return;
         }
-        
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">${isEdit ? '✏️ Editar' : '⚽ Cargar'} Partido</h1><div class="admin-card mb-6"><div class="grid grid-cols-2 gap-4"><input type="date" id="m_fecha" class="glass p-3 rounded-xl bg-gray-900 text-white" value="${isEdit ? toInputDate(adminMatch.Fecha) : new Date().toISOString().split('T')[0]}"><select id="m_estadio" class="glass p-3 rounded-xl bg-gray-900 text-white">${estadios.map(e => `<option value="${e}" ${isEdit && adminMatch.Estadio === e ? 'selected' : ''}>${e}</option>`).join('')}</select><select id="m_temp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="1" ${isEdit && adminMatch.Temporada == '1' ? 'selected' : ''}>Temp 1</option><option value="2" ${isEdit ? (adminMatch.Temporada == '2' ? 'selected' : '') : 'selected'}>Temp 2</option></select><select id="m_mvp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="">MVP</option>${DB['HISTORICA'].map(p=>`<option ${isEdit && adminMatch.MVP === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><div class="flex gap-2 items-center"><span class="font-bold">E1:</span><input type="number" id="m_g1" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E1 : 0}"></div><div class="flex gap-2 items-center"><span class="font-bold">E2:</span><input type="number" id="m_g2" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E2 : 0}"></div></div></div><div class="admin-card mt-4"><div class="grid grid-cols-5 gap-2 mb-4"><select id="p_jugador" class="glass p-2 rounded-lg bg-gray-900 text-white col-span-2"><option value="">Jugador...</option>${DB['HISTORICA'].map(p=>`<option>${p.JUGADOR}</option>`).join('')}</select><select id="p_equipo" class="glass p-2 rounded-lg bg-gray-900 text-white"><option value="Equipo 1">Eq 1</option><option value="Equipo 2">Eq 2</option></select><input type="number" id="p_goles" placeholder="Goles" class="glass p-2 rounded-lg bg-gray-900 text-white"><input type="number" id="p_nota" placeholder="Nota" class="glass p-2 rounded-lg bg-gray-900 text-white"></div><button onclick="addPlayerToMatch()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl mb-4">+ Agregar</button><div class="space-y-2">${adminMatch.Detalle.map((p, i) => `<div class="gen-player"><span>${p.Jugador} (Eq ${p.Equipo}) - ⚽${p.Goles} ⭐${p.Nota}</span><button onclick="removePlayerFromMatch(${i})" class="text-red-500 font-bold">X</button></div>`).join('')}</div></div><button onclick="${isEdit ? 'saveEditedMatch()' : 'saveMatch()'}" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-lg mt-4">${isEdit ? 'GUARDAR CAMBIOS' : 'GUARDAR PARTIDO'}</button>`;
     }
     else if(adminSection === 'manageStadiums') {
@@ -841,7 +789,6 @@ function setAdminSection(section) { adminSection = section; adminMatch = { Fecha
 function showAlert(title, message, type = 'success') {
     const icon = type === 'success' ? '✅' : '⚠️';
     const color = type === 'success' ? 'text-green-400' : 'text-red-400';
-    
     const modal = document.createElement('div');
     modal.id = 'feedback-modal';
     modal.className = 'admin-modal-overlay';
@@ -860,87 +807,66 @@ function loadMatchIntoAdmin(id) {
     const m = DB['PARTIDOS'].find(m => m.ID_Partido == id);
     const dets = DB['DETALLE_PARTIDO'].filter(d => d.ID_Partido == id);
     adminMatch = {
-        ID_Partido: m.ID_Partido,
-        Fecha: m.Fecha,
-        Temporada: m.Temporada,
-        Goles_E1: m.Goles_E1,
-        Goles_E2: m.Goles_E2,
-        MVP: m.MVP,
-        Estadio: m.Estadio || 'St. Diego',
+        ID_Partido: m.ID_Partido, Fecha: m.Fecha, Temporada: m.Temporada, Goles_E1: m.Goles_E1, Goles_E2: m.Goles_E2, MVP: m.MVP, Estadio: m.Estadio || 'St. Diego',
         Detalle: dets.map(d => ({ Jugador: d.Jugador, Equipo: d.Equipo, Goles: d.Goles, Nota: d.Nota }))
     };
     renderAdmin();
 }
 
-// --- FUNCIONES DE ADMIN ---
 async function saveNewPlayer() { 
     const n = document.getElementById('new_player_name').value, p = document.getElementById('new_player_pos').value; 
     if(!n||!p) return showAlert('Faltan datos', 'Por favor, completá nombre y posición.', 'error'); 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); 
-        showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); 
-        await loadData(); setAdminSection('menu'); 
+        showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function deleteMatch() { 
     const id = document.getElementById('del_match_select').value; 
     if(!confirm("¿Seguro que querés borrar este partido? Esta acción no se puede deshacer.")) return; 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: id, Password: adminPassword }) }); 
-        showAlert('Partido Eliminado', 'El partido fue borrado correctamente.'); 
-        await loadData(); setAdminSection('menu'); 
+        showAlert('Partido Eliminado', 'El partido fue borrado correctamente.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function savePhoto() { 
     const n = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; 
     if(!id) return showAlert('Faltan datos', 'Tenés que pegar un ID de Drive.', 'error'); 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: n, FotoId: id, Password: adminPassword }) }); 
-        showAlert('Foto Guardada', 'La imagen se vinculó correctamente.'); 
-        await loadData(); setAdminSection('menu'); 
+        showAlert('Foto Guardada', 'La imagen se vinculó correctamente.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function saveStadium() { 
     const n = document.getElementById('new_stadium_name').value; 
     if(!n) return showAlert('Faltan datos', 'Escribí el nombre del estadio.', 'error'); 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addStadium', Nombre: n, Password: adminPassword }) }); 
-        showAlert('Estadio Añadido', 'La nueva cancha está disponible.'); 
-        await loadData(); setAdminSection('manageStadiums'); 
+        showAlert('Estadio Añadido', 'La nueva cancha está disponible.'); await loadData(); setAdminSection('manageStadiums'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function deleteStadium(name) { 
     if(!confirm("¿Eliminar "+name+"?")) return; 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteStadium', Nombre: name, Password: adminPassword }) }); 
-        showAlert('Estadio Eliminado', 'La cancha fue borrada.'); 
-        await loadData(); setAdminSection('manageStadiums'); 
+        showAlert('Estadio Eliminado', 'La cancha fue borrada.'); await loadData(); setAdminSection('manageStadiums'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function editStadium(oldName) { 
     const newName = prompt("Nuevo nombre para:", oldName); 
     if(!newName) return; 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStadium', OldName: oldName, NewName: newName, Password: adminPassword }) }); 
-        showAlert('Estadio Actualizado', 'El nombre fue cambiado.'); 
-        await loadData(); setAdminSection('manageStadiums'); 
+        showAlert('Estadio Actualizado', 'El nombre fue cambiado.'); await loadData(); setAdminSection('manageStadiums'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 async function saveHomeText() { 
     const t = document.getElementById('home_text_input').value; 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveHomeText', Text: t, Password: adminPassword }) }); 
-        showAlert('Texto Guardado', 'La noticia del inicio fue actualizada.'); 
-        await loadData(); setAdminSection('menu'); 
+        showAlert('Texto Guardado', 'La noticia del inicio fue actualizada.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
-
 function addPlayerToMatch() { 
     const j = document.getElementById('p_jugador').value, e = document.getElementById('p_equipo').value, g = document.getElementById('p_goles').value, nt = document.getElementById('p_nota').value; 
     if(!j) return showAlert('Faltan datos', 'Elegí un jugador.', 'error'); 
@@ -955,9 +881,7 @@ async function saveMatch() {
     adminMatch.MVP = document.getElementById('m_mvp').value; 
     adminMatch.Goles_E1 = parseInt(document.getElementById('m_g1').value) || 0; 
     adminMatch.Goles_E2 = parseInt(document.getElementById('m_g2').value) || 0; 
-    
     if(!adminMatch.Detalle.length) return showAlert('Faltan datos', 'Agregá al menos un jugador.', 'error'); 
-    
     adminMatch.Detalle.forEach(d => {
         const teamNum = String(d.Equipo).includes('1') ? 1 : 2;
         d.Equipo = "Equipo " + teamNum; 
@@ -965,40 +889,30 @@ async function saveMatch() {
         else if (teamNum === 1) d.Resultado = adminMatch.Goles_E1 > adminMatch.Goles_E2 ? "Ganó" : "Perdió";
         else d.Resultado = adminMatch.Goles_E2 > adminMatch.Goles_E1 ? "Ganó" : "Perdió";
     });
-
     try { 
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: 'saveMatch', ...adminMatch, Password: adminPassword}) }); 
         const data = await res.json(); 
         if(data.status === 'success') { 
             showAlert('Partido Cargado', 'El resultado se guardó en el Excel.'); 
             adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; 
-            await loadData(); 
-            showView('home'); 
-        } else { 
-            showAlert('Error del servidor', data.message || "Desconocido", 'error'); 
-        } 
-    } catch(e) { 
-        showAlert('Error', 'No se pudo conectar.', 'error'); 
-    } 
+            await loadData(); showView('home'); 
+        } else { showAlert('Error del servidor', data.message || "Desconocido", 'error'); } 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
 
 async function saveEditedMatch() {
     if(!adminMatch.ID_Partido) return showAlert('Error', 'No se seleccionó ningún partido para editar.', 'error');
-    
     if(!adminPassword) {
         adminPassword = prompt("Ingresá nuevamente la clave Admin para guardar:");
         if(!adminPassword) return;
     }
-
     adminMatch.Fecha = document.getElementById('m_fecha').value; 
     adminMatch.Estadio = document.getElementById('m_estadio').value; 
     adminMatch.Temporada = document.getElementById('m_temp').value; 
     adminMatch.MVP = document.getElementById('m_mvp').value; 
     adminMatch.Goles_E1 = parseInt(document.getElementById('m_g1').value) || 0; 
     adminMatch.Goles_E2 = parseInt(document.getElementById('m_g2').value) || 0; 
-    
     if(!adminMatch.Detalle || adminMatch.Detalle.length === 0) return showAlert('Faltan datos', 'El partido debe tener al menos un jugador cargado.', 'error'); 
-    
     adminMatch.Detalle.forEach(d => {
         const teamNum = String(d.Equipo).includes('1') ? 1 : 2;
         d.Equipo = "Equipo " + teamNum; 
@@ -1006,25 +920,17 @@ async function saveEditedMatch() {
         else if (teamNum === 1) d.Resultado = adminMatch.Goles_E1 > adminMatch.Goles_E2 ? "Ganó" : "Perdió";
         else d.Resultado = adminMatch.Goles_E2 > adminMatch.Goles_E1 ? "Ganó" : "Perdió";
     });
-
     try { 
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: 'editMatch', ...adminMatch, Password: adminPassword}) }); 
         const data = await res.json(); 
-        
         if(data.status === 'success') { 
             showAlert('Partido Actualizado', 'Los cambios se guardaron correctamente.'); 
             adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; 
-            await loadData(); 
-            showView('home'); 
-        } else { 
-            showAlert('Error del servidor', data.message || "Desconocido", 'error'); 
-        } 
-    } catch(e) { 
-        showAlert('Error', 'No se pudo conectar.', 'error'); 
-    } 
+            await loadData(); showView('home'); 
+        } else { showAlert('Error del servidor', data.message || "Desconocido", 'error'); } 
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
 
-// --- GENERADOR DE EQUIPOS ---
 function addPlayerToGen() { const p = document.getElementById('gen_select').value; if(!p) return; if(!teamGenPlayers.includes(p)) teamGenPlayers.push(p); showView('teamGen'); }
 function removePlayerFromGen(i) { teamGenPlayers.splice(i, 1); showView('teamGen'); }
 function updateTeamGenOptions(type, value) {
@@ -1032,43 +938,25 @@ function updateTeamGenOptions(type, value) {
     if(type === 'criteria') teamGenCriteria = value;
     showView('teamGen');
 }
-
 function generateTeams() {
     const tempData = getSeasonData(teamGenSeason);
     const histData = DB['HISTORICA'] || [];
-    
     const playersWithVal = teamGenPlayers.map(name => {
-        // Buscamos en la temporada seleccionada
         let pData = tempData.find(p => p.JUGADOR === name);
-        
-        // LÓGICA FALLBACK INTELIGENTE
         if(!pData) pData = histData.find(p => p.JUGADOR === name) || {};
-        
-        // Obtenemos el valor según el criterio elegido
         let val = n(pData[teamGenCriteria]);
-        
-        // Si el valor es 0 (no jugó o no tiene stat)
         if(val === 0) {
-            if(teamGenCriteria === 'PROMEDIO') {
-                // Si no tiene promedio, probamos con su Overall de esa temporada
-                val = n(pData.OVERALL);
-            }
-            // Si sigue siendo 0, probamos con el Overall Histórico
+            if(teamGenCriteria === 'PROMEDIO') val = n(pData.OVERALL);
             if(val === 0) val = n(histData.find(p => p.JUGADOR === name)?.OVERALL || 0);
-            // Si el jugador NO EXISTE en ningún lado (Nuevo), le damos un 75 estándar para no perjudicarlo
             if(val === 0) val = 75;
         }
-        
         return { name, val: val };
     }).sort((a,b) => b.val - a.val);
-
     let t1 = [], t2 = [];
     playersWithVal.forEach((p, i) => { if(i % 4 === 0 || i % 4 === 3) t1.push(p); else t2.push(p); });
     const t1Avg = (t1.reduce((s,p) => s+p.val, 0) / t1.length).toFixed(1);
     const t2Avg = (t2.reduce((s,p) => s+p.val, 0) / t2.length).toFixed(1);
-
     const critLabel = teamGenCriteria === 'PROMEDIO' ? 'Prom' : 'OVR';
-
     document.getElementById('gen_result').innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="glass rounded-2xl p-6 border border-blue-500/30">
@@ -1083,7 +971,6 @@ function generateTeams() {
     `;
 }
 
-// --- GENERADOR DE CARTAS ---
 function updateCardGen(field, value) {
     if(field === 'name') {
         cardGenData.name = value;
@@ -1094,33 +981,25 @@ function updateCardGen(field, value) {
     else cardGenData.stats[field] = n(value);
     updateCardPreview();
 }
-
 function updateCardPreview() {
     const ovr = n(cardGenData.ovr);
     const cardType = getCardType(ovr);
-    
     const templateNames = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' };
     const templateName = templateNames[cardType];
     const cardBg = photosMap[templateName] || "https://via.placeholder.com/300x420?text=Falta+ID+de+" + templateName;
     const photo = cardGenData.photo || "https://via.placeholder.com/150";
-    
     const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
-    
     document.getElementById('card_preview').innerHTML = `
         <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="this.src='https://via.placeholder.com/300x420?text=Error+al+cargar+ID'">
-            
             <div style="position: absolute; top: 65px; left: 67px; text-align: center; color: ${txtColor};">
                 <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
                 <p style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">${cardGenData.pos}</p>
             </div>
-            
             <div style="position: absolute; top: 87px; left: 51%; transform: translateX(-50%); width: 110px; height: 125px;">
                 <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
             </div>
-            
             <p style="position: absolute; top: 225px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
-            
             <div style="position: absolute; bottom: 71px; width: 100%; display: flex; justify-content: center; gap: 50px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
@@ -1137,19 +1016,17 @@ function updateCardPreview() {
     `;
 }
 
-// --- HELPERS ---
 function changeProfileSeason(playerName, season) { currentProfileSeason = season; showView('playerProfile', playerName); }
 function updateDuel(playerNum, name) { if(playerNum === 1) duelP1Name = name; else duelP2Name = name; showView('duels'); }
 function changeSeason(temp) { currentSeason = temp; showView('seasons'); }
 function changeDuelSeason(temp) { currentDuelSeason = temp; showView('duels'); }
+
 async function checkAdmin() {
     if (adminPassword) { 
         adminSection = 'menu'; 
         showView('admin'); 
         return; 
     }
-
-    // Crear Modal Estético
     const modal = document.createElement('div');
     modal.id = 'admin-modal';
     modal.className = 'admin-modal-overlay';
@@ -1169,51 +1046,10 @@ async function checkAdmin() {
     document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
 }
 
-let seasonsSortKey = null;
-let seasonsSortDir = 'desc';
-
-function sortSeasonsTable(key) {
-    let excelKey = key;
-    if (key === 'MVP') excelKey = "MVP'S";
-    if (key === 'RATIO') excelKey = 'RATIO GOLEADOR';
-
-    if (seasonsSortKey === excelKey) {
-        seasonsSortDir = seasonsSortDir === 'desc' ? 'asc' : 'desc';
-    } else {
-        seasonsSortKey = excelKey;
-        seasonsSortDir = (key === 'JUGADOR') ? 'asc' : 'desc';
-    }
-    const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
-    document.getElementById('seasons-tbody').innerHTML = renderSeasonsTableBody(tempData);
-}
-
-function renderSeasonsTableBody(tempData) {
-    let data = tempData.filter(p => n(p.PARTIDOS) > 0);
-    
-    if (seasonsSortKey) {
-        data.sort((a, b) => {
-            let valA = a[seasonsSortKey];
-            let valB = b[seasonsSortKey];
-            if (seasonsSortKey === 'JUGADOR') {
-                valA = String(valA).toLowerCase();
-                valB = String(valB).toLowerCase();
-                return seasonsSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            } else {
-                valA = n(valA);
-                valB = n(valB);
-                return seasonsSortDir === 'asc' ? valA - valB : valB - valA;
-            }
-        });
-    }
-
-    return data.map(p => `<tr class="border-t border-white/5 hover:bg-white/5 cursor-pointer" onclick="showView('playerProfile', '${p.JUGADOR}')"><td class="p-3 font-semibold text-white">${p.JUGADOR}</td><td class="p-3 text-center text-gray-400">${n(p.PARTIDOS)}</td><td class="p-3 text-center text-blue-400">${n(p.VICTORIAS)}</td><td class="p-3 text-center text-gray-400">${n(p.EMPATES)}</td><td class="p-3 text-center text-red-400">${n(p.DERROTAS)}</td><td class="p-3 text-center font-bold text-blue-400">${n(p.GOLES)}</td><td class="p-3 text-center text-gray-400">${n(p["RATIO GOLEADOR"]).toFixed(2)}</td><td class="p-3 text-center text-yellow-400">${n(p["MVP'S"])}</td><td class="p-3 text-center text-cyan-400">${n(p.PROMEDIO).toFixed(2)}</td></tr>`).join('');
-}
-
 async function submitAdminPass() {
     const pass = document.getElementById('admin-pass-input').value;
     document.getElementById('admin-modal').remove();
     if(!pass) return;
-    
     try { 
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'checkAdmin', Password: pass }) }); 
         const data = await res.json(); 
@@ -1234,7 +1070,6 @@ function renderDuel() {
     const defaultStats = { OVERALL: 0, PARTIDOS: 0, GOLES: 0, VICTORIAS: 0, "MVP'S": 0, PROMEDIO: 0 };
     const s1 = tempData.find(p => String(p.JUGADOR).trim() === String(duelP1Name).trim()) || { JUGADOR: duelP1Name, ...defaultStats };
     const s2 = tempData.find(p => String(p.JUGADOR).trim() === String(duelP2Name).trim()) || { JUGADOR: duelP2Name, ...defaultStats };
-    
     const stats = [
         { label: 'Overall', val1: n(s1.OVERALL), val2: n(s2.OVERALL) }, { label: 'Partidos', val1: n(s1.PARTIDOS), val2: n(s2.PARTIDOS) },
         { label: 'Goles', val1: n(s1.GOLES), val2: n(s2.GOLES) }, { label: 'Victorias', val1: n(s1.VICTORIAS), val2: n(s2.VICTORIAS) },
@@ -1244,7 +1079,6 @@ function renderDuel() {
 }
 
 // --- SISTEMA DE RUTAS (URLs REALES) ---
-
 const validViews = ['home', 'players', 'seasons', 'duels', 'matchDetail', 'playerProfile', 'admin', 'cardGen', 'teamGen'];
 let BASE_URL = '';
 
@@ -1259,11 +1093,9 @@ function getBasePath() {
     }
     return path.endsWith('/') ? path : path + '/';
 }
-
 document.addEventListener('click', e => {
     if (e.target.closest('a[href="#"]')) e.preventDefault();
 });
-
 function getRouteFromUrl() {
     let search = window.location.search;
     if (search.startsWith('?/')) {
@@ -1273,10 +1105,8 @@ function getRouteFromUrl() {
         let param = parts[1] ? decodeURIComponent(parts[1]) : null;
         return { view, param };
     }
-    
     let path = window.location.pathname;
     if (path.endsWith('/index.html')) return { view: 'home', param: null };
-    
     let segments = path.split('/').filter(p => p !== '');
     for (let i = 0; i < segments.length; i++) {
         if (validViews.includes(segments[i])) {
@@ -1287,7 +1117,6 @@ function getRouteFromUrl() {
     }
     return { view: 'home', param: null };
 }
-
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
         showView(e.state.view, e.state.param);
@@ -1295,10 +1124,8 @@ window.addEventListener('popstate', (e) => {
         showView('home');
     }
 });
-
 async function initApp() {
     await loadData();
-    
     let search = window.location.search;
     if (search.startsWith('?/')) {
         let route = search.substring(2).split('&')[0];
@@ -1315,5 +1142,4 @@ async function initApp() {
         showView(initialRoute.view, initialRoute.param);
     }
 }
-
 initApp();
