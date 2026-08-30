@@ -270,7 +270,6 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
-        const homeText = DB['CONFIG'] && DB['CONFIG'].home_text ? DB['CONFIG'].home_text : '';
         
         const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
 
@@ -291,20 +290,14 @@ function showView(view, param = null) {
                 <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full">
                     <div class="last-match-bg" style="background-image: url('${esquinaBg}')"></div>
                     <div class="last-match-content">
-                        <!-- Arriba: Fecha -->
                         <div class="flex justify-end items-center mb-8">
                             <span class="text-xs font-bold uppercase tracking-widest text-gray-300 bg-black/50 px-2 py-1 rounded">${formatDate(lastMatch.Fecha)}</span>
                         </div>
-
-                        <!-- Medio: 3 Columnas (Alineados arriba) -->
                         <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-6">
-                            <!-- IZQ: Equipo 1 -->
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-8 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
                             </div>
-
-                            <!-- CENTRO: Resultado Enmarcado y MVP -->
                             <div class="flex flex-col items-center">
                                 <div class="bg-black/60 border border-white/10 rounded-xl md:rounded-2xl px-3 md:px-6 py-2 md:py-4 mb-6 md:mb-8">
                                     <div class="flex items-center gap-2 md:gap-6">
@@ -313,23 +306,17 @@ function showView(view, param = null) {
                                         <span class="text-5xl md:text-8xl font-black text-red-400 drop-shadow-lg">${lastMatch.Goles_E2}</span>
                                     </div>
                                 </div>
-                                
-                                <!-- MVP más abajo y con etiqueta -->
                                 <div class="flex flex-col items-center mt-2 md:mt-4">
                                     <img src="${getPhoto(lastMatch.MVP)}" class="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-2 shadow-lg shadow-yellow-500/20">
                                     <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
                                     <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP}</p>
                                 </div>
                             </div>
-
-                            <!-- DER: Equipo 2 -->
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-8 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
                             </div>
                         </div>
-
-                        <!-- Abajo: Estadio -->
                         <div class="text-right mt-4">
                             <span class="text-xs font-bold uppercase tracking-widest text-gray-400 bg-black/50 px-2 py-1 rounded">🏟️ ${lastMatch.Estadio || 'St. Diego'}</span>
                         </div>
@@ -342,7 +329,6 @@ function showView(view, param = null) {
 
         app.innerHTML = `
             <div class="flex flex-col gap-8">
-                <!-- FILA 1: Ultimo Partido y Top 10 -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 flex flex-col">
                         <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Último Partido</h2>
@@ -361,7 +347,7 @@ function showView(view, param = null) {
                                         const pj = n(j.PJ || j['PARTIDOS']);
                                         const goles = n(j.GOLES || j['Goles']);
                                         let rowColor = i === 0 ? 'bg-yellow-500/10' : i === 1 ? 'bg-gray-400/10' : i === 2 ? 'bg-orange-700/10' : '';
-                                        return `<tr class="border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center font-black text-blue-400">${goles}</td></tr>`;
+                                        return `<tr onclick="showView('playerProfile', '${nombre}')" class="cursor-pointer border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center font-black text-blue-400">${goles}</td></tr>`;
                                     }).join('')}
                                 </tbody>
                             </table>
@@ -369,23 +355,23 @@ function showView(view, param = null) {
                     </div>
                 </div>
 
-                <!-- FILA 2: Placas Centradas con Fondo -->
+                <!-- PLACAS CLICKEABLES -->
                 <div class="flex flex-col md:flex-row justify-center gap-6">
-                    <div class="stat-record w-full md:w-1/3 justify-center glow-yellow bg-black/40">
+                    <div onclick="${records.biggestWin ? `showView('matchDetail', '${records.biggestWin.ID_Partido}')` : ''}" class="stat-record w-full md:w-1/3 justify-center glow-yellow bg-black/40 cursor-pointer hover:scale-105 transition">
                         <div class="text-2xl">🥇</div>
                         <div class="text-center"><p class="text-xs text-gray-500 uppercase">Mayor Goleada</p><p class="text-lg font-bold text-white">${records.biggestWin ? records.biggestWin.Goles_E1 + '-' + records.biggestWin.Goles_E2 : '-'}</p></div>
                     </div>
-                    <div class="stat-record w-full md:w-1/3 justify-center glow-blue bg-black/40">
+                    <div onclick="${records.winStreak.name !== '-' ? `showView('playerProfile', '${records.winStreak.name}')` : ''}" class="stat-record w-full md:w-1/3 justify-center glow-blue bg-black/40 cursor-pointer hover:scale-105 transition">
                         <div class="text-2xl">🔥</div>
                         <div class="text-center"><p class="text-xs text-gray-500 uppercase">Racha Victorias</p><p class="text-base font-bold text-blue-400">${records.winStreak.name} (${records.winStreak.val})</p></div>
                     </div>
-                    <div class="stat-record w-full md:w-1/3 justify-center glow-cyan bg-black/40">
+                    <div onclick="${records.bestForm.name !== '-' ? `showView('playerProfile', '${records.bestForm.name}')` : ''}" class="stat-record w-full md:w-1/3 justify-center glow-cyan bg-black/40 cursor-pointer hover:scale-105 transition">
                         <div class="text-2xl">📈</div>
                         <div class="text-center"><p class="text-xs text-gray-500 uppercase">Mejor Forma</p><p class="text-base font-bold text-cyan-400">${records.bestForm.name} (${records.bestForm.val})</p></div>
                     </div>
                 </div>
 
-                <!-- FILA 3: Tabla Completa -->
+                <!-- TABLA COMPLETA CLICKEABLE -->
                 <div>
                     <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones</h2>
                     <div class="glass rounded-2xl overflow-hidden border border-white/10">
@@ -399,7 +385,7 @@ function showView(view, param = null) {
                                     const pj = n(j.PJ || j['PARTIDOS']); const pg = n(j.PG || j['VICTORIAS']); const pe = n(j.PE || j['EMPATES']); const pp = n(j.PP || j['DERROTAS']);
                                     const goles = n(j.GOLES || j['Goles']); const pts = n(j.PTS || j['Puntos']);
                                     let rowColor = i === 0 ? 'bg-yellow-500/10' : i === 1 ? 'bg-gray-400/10' : i === 2 ? 'bg-orange-700/10' : '';
-                                    return `<tr class="border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center text-blue-400">${pg}</td><td class="p-3 text-center text-gray-400">${pe}</td><td class="p-3 text-center text-red-400">${pp}</td><td class="p-3 text-center text-gray-400">${goles}</td><td class="p-3 text-center font-black text-blue-400">${pts}</td></tr>`;
+                                    return `<tr onclick="showView('playerProfile', '${nombre}')" class="cursor-pointer border-b border-white/5 ${rowColor} hover:bg-white/5 transition"><td class="p-3 font-semibold text-white">${i+1}. ${nombre}</td><td class="p-3 text-center text-gray-400">${pj}</td><td class="p-3 text-center text-blue-400">${pg}</td><td class="p-3 text-center text-gray-400">${pe}</td><td class="p-3 text-center text-red-400">${pp}</td><td class="p-3 text-center text-gray-400">${goles}</td><td class="p-3 text-center font-black text-blue-400">${pts}</td></tr>`;
                                 }).join('')}
                             </tbody>
                         </table>
@@ -750,10 +736,13 @@ function showView(view, param = null) {
     else if(view === 'admin') { renderAdmin(); }
     window.scrollTo(0, 0);
     
-    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA
-    let url = view;
-    if (param) url += '/' + encodeURIComponent(param);
-    window.history.pushState({ view, param }, '', url);
+    // ACTUALIZAR URL SIN RECARGAR LA PÁGINA (Arreglado URLs acumulables)
+    if (!window.isRouting) {
+        const repoPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        let url = repoPath + view;
+        if (param) url += '/' + encodeURIComponent(param);
+        window.history.pushState({ view, param: param || null }, '', url);
+    }
 }
 // Genera el HTML de la grilla de jugadores según la búsqueda
 function renderPlayersGrid(query = '', sortBy = 'default') {
@@ -1141,6 +1130,41 @@ async function checkAdmin() {
         showView('admin'); 
         return; 
     }
+let seasonsSortKey = null;
+let seasonsSortDir = 'desc';
+
+function sortSeasonsTable(key) {
+    if (seasonsSortKey === key) {
+        seasonsSortDir = seasonsSortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+        seasonsSortKey = key;
+        seasonsSortDir = (key === 'JUGADOR') ? 'asc' : 'desc'; // Nombre por defecto ascendente
+    }
+    const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
+    document.getElementById('seasons-tbody').innerHTML = renderSeasonsTableBody(tempData);
+}
+
+function renderSeasonsTableBody(tempData) {
+    let data = tempData.filter(p => n(p.PARTIDOS) > 0);
+    
+    if (seasonsSortKey) {
+        data.sort((a, b) => {
+            let valA = a[seasonsSortKey];
+            let valB = b[seasonsSortKey];
+            if (seasonsSortKey === 'JUGADOR') {
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return seasonsSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                valA = n(valA);
+                valB = n(valB);
+                return seasonsSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+        });
+    }
+
+    return data.map(p => `<tr class="border-t border-white/5 hover:bg-white/5 cursor-pointer" onclick="showView('playerProfile', '${p.JUGADOR}')"><td class="p-3 font-semibold text-white">${p.JUGADOR}</td><td class="p-3 text-center text-gray-400">${n(p.PARTIDOS)}</td><td class="p-3 text-center text-blue-400">${n(p.VICTORIAS)}</td><td class="p-3 text-center text-gray-400">${n(p.EMPATES)}</td><td class="p-3 text-center text-red-400">${n(p.DERROTAS)}</td><td class="p-3 text-center font-bold text-blue-400">${n(p.GOLES)}</td><td class="p-3 text-center text-gray-400">${n(p["RATIO GOLEADOR"]).toFixed(2)}</td><td class="p-3 text-center text-yellow-400">${n(p["MVP'S"])}</td><td class="p-3 text-center text-cyan-400">${n(p.PROMEDIO).toFixed(2)}</td></tr>`).join('');
+}
 
     // Crear Modal Estético
     const modal = document.createElement('div');
@@ -1206,20 +1230,23 @@ document.addEventListener('click', e => {
 // 2. Función para leer la URL al entrar a la página
 function getRouteFromUrl() {
     let search = window.location.search;
-    // Si viene del truco del 404.html
     if (search.startsWith('?/')) {
         let route = search.substring(2).split('&')[0];
-        window.history.replaceState({}, '', window.location.pathname + route);
         let parts = route.split('/');
-        return { view: parts[0] || 'home', param: decodeURIComponent(parts[1] || '') || null };
+        let view = parts[0] || 'home';
+        let param = parts[1] ? decodeURIComponent(parts[1]) : null;
+        // Limpiamos la URL para que no se vea el ?/
+        const repoPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        let cleanUrl = repoPath + view + (param ? '/' + encodeURIComponent(param) : '');
+        window.history.replaceState({}, '', cleanUrl);
+        return { view, param };
     }
     
-    // Si entró directo a una URL
     let parts = window.location.pathname.split('/').filter(p => p !== '');
     if (parts.length >= 2) {
-        let view = parts[1]; // agarramos la parte después del repo
+        let view = parts[1];
         let param = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
-        return { view: view, param: param };
+        return { view, param };
     }
     return { view: 'home', param: null };
 }
