@@ -613,7 +613,7 @@ function showView(view, param = null) {
         });
     }
     
-    else if(view === 'seasons') {
+else if(view === 'seasons') {
         const tempData = getSeasonData(currentSeason === 'hist' ? 'hist' : currentSeason);
         const matches = (DB['PARTIDOS'] || []).filter(m => currentSeason === 'hist' ? true : String(m.Temporada) === String(currentSeason));
         
@@ -651,15 +651,15 @@ function showView(view, param = null) {
                 <table class="w-full text-sm whitespace-nowrap">
                     <thead class="bg-white/5 text-gray-500 uppercase text-xs">
                         <tr>
-                            <th class="p-3 text-left cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('JUGADOR')">Jugador ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PARTIDOS')">PJ ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('VICTORIAS')">PG ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('EMPATES')">PE ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('RATIO')">Ratio ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('MVP')">MVP ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-blue-400 select-none" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
+                            <th class="p-3 text-left cursor-pointer hover:text-white" onclick="sortSeasonsTable('JUGADOR')">Jugador ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PARTIDOS')">PJ ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('VICTORIAS')">PG ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('EMPATES')">PE ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('RATIO GOLEADOR')">Ratio ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP\\'S')">MVP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
                         </tr>
                     </thead>
                     <tbody id="seasons-tbody">
@@ -668,7 +668,7 @@ function showView(view, param = null) {
                 </table>
             </div>
         `;
-    }
+}
     else if(view === 'duels') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
