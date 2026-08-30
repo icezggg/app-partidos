@@ -95,3 +95,19 @@ body { font-family: 'Inter', sans-serif; background-image: linear-gradient(rgba(
     .last-match-card { min-height: auto; }
     .last-match-content { padding: 16px; }
 }
+
+/* MODAL DE ADMIN ESTÉTICO */
+.admin-modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+}
+.admin-modal-box {
+    background: rgba(20,20,20,0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+    padding: 32px; border-radius: 16px; width: 100%; max-width: 400px;
+    animation: scaleIn 0.2s ease-out;
+}
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
