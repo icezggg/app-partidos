@@ -658,7 +658,7 @@ else if(view === 'seasons') {
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('DERROTAS')">PP ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('GOLES')">Goles ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('RATIO GOLEADOR')">Ratio ⇅</th>
-                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP')">MVP ⇅</th>
+                            <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('MVP\\'S')">MVP ⇅</th>
                             <th class="p-3 text-center cursor-pointer hover:text-white" onclick="sortSeasonsTable('PROMEDIO')">Prom ⇅</th>
                         </tr>
                     </thead>
