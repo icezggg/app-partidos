@@ -262,7 +262,7 @@ function showView(view, param = null) {
                         </div>
                         <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-6">
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-4 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
                             </div>
                             <div class="flex flex-col items-center">
@@ -280,7 +280,7 @@ function showView(view, param = null) {
                                 </div>
                             </div>
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-4 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
+                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
                             </div>
                         </div>
