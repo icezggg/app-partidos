@@ -6,7 +6,8 @@ let adminSection = 'menu'; let adminPassword = null;
 let adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] };
 let teamGenPlayers = [];
 let cardGenData = { name: '', ovr: 75, pos: 'DC', stats: { rit: 75, tir: 75, pas: 75, reg: 75, def: 75, fis: 75 }, photo: '' };
-
+let teamGenSeason = 'hist';
+let teamGenCriteria = 'OVERALL';
 const n = (val) => {
     if (!val) return 0;
     if (typeof val === 'number') return val;
@@ -679,11 +680,31 @@ function showView(view, param = null) {
             <div id="duel-content">${duelP1Name && duelP2Name ? renderDuel() : '<p class="text-center text-gray-600 mt-10">Selecciona ambos jugadores...</p>'}</div>
         `;
     }
-    else if(view === 'teamGen') {
+     else if(view === 'teamGen') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
             <h1 class="text-5xl font-black text-white uppercase mb-6">⚽ Generador de Equipos</h1>
             <div class="glass p-6 rounded-2xl border border-white/10 mb-6">
+                
+                <!-- OPCIONES DE GENERACIÓN -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase font-bold">Temporada</label>
+                        <select id="gen_season" onchange="updateTeamGenOptions('season', this.value)" class="w-full glass p-2 rounded-lg bg-gray-900 text-white mt-1">
+                            <option value="hist" ${teamGenSeason === 'hist' ? 'selected' : ''}>Histórica</option>
+                            <option value="t1" ${teamGenSeason === 't1' ? 'selected' : ''}>Temp 1</option>
+                            <option value="t2" ${teamGenSeason === 't2' ? 'selected' : ''}>Temp 2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase font-bold">Balancear por</label>
+                        <select id="gen_criteria" onchange="updateTeamGenOptions('criteria', this.value)" class="w-full glass p-2 rounded-lg bg-gray-900 text-white mt-1">
+                            <option value="OVERALL" ${teamGenCriteria === 'OVERALL' ? 'selected' : ''}>Overall</option>
+                            <option value="PROMEDIO" ${teamGenCriteria === 'PROMEDIO' ? 'selected' : ''}>Promedio de Notas</option>
+                        </select>
+                    </div>
+                </div>
+
                 <h3 class="text-lg font-bold mb-4 text-gray-300">Seleccionar Jugadores (${teamGenPlayers.length})</h3>
                 <div class="flex gap-2 mb-4">
                     <select id="gen_select" class="glass p-3 rounded-xl bg-gray-900 text-white flex-grow"><option value="">Elegir jugador...</option>${histData.map(p => `<option value="${p.JUGADOR}" ${teamGenPlayers.includes(p.JUGADOR) ? 'disabled' : ''}>${p.JUGADOR}</option>`).join('')}</select>
@@ -994,19 +1015,56 @@ async function saveEditedMatch() {
 // --- GENERADOR DE EQUIPOS ---
 function addPlayerToGen() { const p = document.getElementById('gen_select').value; if(!p) return; if(!teamGenPlayers.includes(p)) teamGenPlayers.push(p); showView('teamGen'); }
 function removePlayerFromGen(i) { teamGenPlayers.splice(i, 1); showView('teamGen'); }
+function updateTeamGenOptions(type, value) {
+    if(type === 'season') teamGenSeason = value;
+    if(type === 'criteria') teamGenCriteria = value;
+    showView('teamGen');
+}
+
 function generateTeams() {
-    const tempData = getSeasonData(currentSeason);
-    const playersWithOvr = teamGenPlayers.map(name => {
-        const pData = tempData.find(p => p.JUGADOR === name) || { OVERALL: 50 };
-        return { name, ovr: n(pData.OVERALL) };
-    }).sort((a,b) => b.ovr - a.ovr);
+    const tempData = getSeasonData(teamGenSeason);
+    const histData = DB['HISTORICA'] || [];
+    
+    const playersWithVal = teamGenPlayers.map(name => {
+        // Buscamos en la temporada seleccionada
+        let pData = tempData.find(p => p.JUGADOR === name);
+        
+        // LÓGICA FALLBACK: Si no tiene datos en esa temporada, usamos la Histórica
+        if(!pData) pData = histData.find(p => p.JUGADOR === name) || {};
+        
+        // Obtenemos el valor según el criterio elegido
+        let val = n(pData[teamGenCriteria]);
+        
+        // Si el promedio es 0 (no jugó), usamos el Overall para no romper el balance
+        if(val === 0 && teamGenCriteria === 'PROMEDIO') {
+            val = n(pData.OVERALL);
+        }
+        
+        // Último fallback: 50
+        if(val === 0) val = 50;
+        
+        return { name, val: val };
+    }).sort((a,b) => b.val - a.val);
 
     let t1 = [], t2 = [];
-    playersWithOvr.forEach((p, i) => { if(i % 4 === 0 || i % 4 === 3) t1.push(p); else t2.push(p); });
-    const t1Avg = (t1.reduce((s,p) => s+p.ovr, 0) / t1.length).toFixed(1);
-    const t2Avg = (t2.reduce((s,p) => s+p.ovr, 0) / t2.length).toFixed(1);
+    playersWithVal.forEach((p, i) => { if(i % 4 === 0 || i % 4 === 3) t1.push(p); else t2.push(p); });
+    const t1Avg = (t1.reduce((s,p) => s+p.val, 0) / t1.length).toFixed(1);
+    const t2Avg = (t2.reduce((s,p) => s+p.val, 0) / t2.length).toFixed(1);
 
-    document.getElementById('gen_result').innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="glass rounded-2xl p-6 border border-blue-500/30"><h3 class="text-2xl font-black text-blue-400 mb-4">EQUIPO 1 (Prom: ${t1Avg})</h3><div class="space-y-2">${t1.map(p => `<div class="gen-player"><span>${p.name}</span><span class="font-black ${getOvrColor(p.ovr)}">${p.ovr} OVR</span></div>`).join('')}</div></div><div class="glass rounded-2xl p-6 border border-red-500/30"><h3 class="text-2xl font-black text-red-400 mb-4">EQUIPO 2 (Prom: ${t2Avg})</h3><div class="space-y-2">${t2.map(p => `<div class="gen-player"><span>${p.name}</span><span class="font-black ${getOvrColor(p.ovr)}">${p.ovr} OVR</span></div>`).join('')}</div></div></div>`;
+    const critLabel = teamGenCriteria === 'PROMEDIO' ? 'Prom' : 'OVR';
+
+    document.getElementById('gen_result').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass rounded-2xl p-6 border border-blue-500/30">
+                <h3 class="text-2xl font-black text-blue-400 mb-4">EQUIPO 1 (Prom: ${t1Avg})</h3>
+                <div class="space-y-2">${t1.map(p => `<div class="gen-player"><span>${p.name}</span><span class="font-black ${getOvrColor(p.val)}">${p.val} ${critLabel}</span></div>`).join('')}</div>
+            </div>
+            <div class="glass rounded-2xl p-6 border border-red-500/30">
+                <h3 class="text-2xl font-black text-red-400 mb-4">EQUIPO 2 (Prom: ${t2Avg})</h3>
+                <div class="space-y-2">${t2.map(p => `<div class="gen-player"><span>${p.name}</span><span class="font-black ${getOvrColor(p.val)}">${p.val} ${critLabel}</span></div>`).join('')}</div>
+            </div>
+        </div>
+    `;
 }
 
 // --- GENERADOR DE CARTAS ---
