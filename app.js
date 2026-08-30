@@ -62,12 +62,12 @@ const formatDate = (dateStr) => {
 
 const getPitchX = (posStr, team) => {
     const pos = String(posStr || 'DC').toUpperCase();
-    let x = team === 1 ? 25 : 75;
+    let x = team === 1 ? 30 : 70;
     if(pos.includes('GK')) x = team === 1 ? 5 : 95;
     else if(pos.includes('DF')) x = team === 1 ? 15 : 85;
-    else if(pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) x = team === 1 ? 30 : 70;
-    else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 35 : 65;
-    else if(pos.includes('DC')) x = team === 1 ? 42 : 58;
+    else if(pos.includes('CM') || pos.includes('MD') || pos.includes('MCO')) x = team === 1 ? 28 : 72; // Medio campo un poco más atrás
+    else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 38 : 62; // Extremos un poco más atrás
+    else if(pos.includes('DC')) x = team === 1 ? 44 : 56; // Delanteros separados del centro para que no se pisen con el otro equipo
     return x;
 };
 
@@ -75,7 +75,9 @@ function getCardType(ovr) { if(ovr >= 94) return 'toty'; if(ovr >= 75) return 'g
 function getOvrColor(ovr) { if(ovr >= 94) return 'text-cyan-400'; if(ovr >= 75) return 'text-yellow-400'; if(ovr >= 68) return 'text-gray-300'; return 'text-orange-600'; }
 
 function toggleDrawer() {
-    document.getElementById('drawer').classList.toggle('drawer-open');
+    const drawer = document.getElementById('drawer');
+    const isOpen = drawer.classList.toggle('drawer-open');
+    document.body.classList.toggle('no-scroll', isOpen);
 }
 
 function calculateRecords() {
@@ -192,17 +194,22 @@ async function loadData() {
             processPhotos(DB);
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
-            showView('home');
+            const initialRoute = getRouteFromUrl();
+            showView(initialRoute.view, initialRoute.param); // Usa la ruta de la URL
         }
+        
         const res = await fetch(API_URL + '?t=' + Date.now());
         DB = await res.json();
         localStorage.setItem('tecSportsDB', JSON.stringify(DB));
         processPhotos(DB);
+        
         if(!cachedDB) {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
-            showView('home');
+            const initialRoute = getRouteFromUrl();
+            showView(initialRoute.view, initialRoute.param);
         } else {
+            // Si ya estaba renderizada, la actualizamos silenciosamente
             const currentView = document.querySelector('.sidebar-link.active')?.getAttribute('onclick').match(/'([^']+)'/)[1] || 'home';
             showView(currentView);
         }
@@ -239,6 +246,7 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
+        
         const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
 
         let matchCardHTML = '<div class="glass p-8 rounded-2xl border border-white/10 h-full flex items-center justify-center"><p class="text-gray-500">No hay partidos cargados aún.</p></div>';
@@ -246,6 +254,7 @@ function showView(view, param = null) {
             const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
             const e1 = details.filter(d => String(d.Equipo).includes('1'));
             const e2 = details.filter(d => String(d.Equipo).includes('2'));
+            
             const formatScorers = (teamArray) => {
                 const scorers = teamArray.filter(p => n(p.Goles) > 0).map(p => `${p.Jugador} (${n(p.Goles)})`);
                 return scorers.length > 0 ? scorers.join('<br>') : 'Sin goles';
@@ -256,35 +265,35 @@ function showView(view, param = null) {
             matchCardHTML = `
                 <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full">
                     <div class="last-match-bg" style="background-image: url('${esquinaBg}')"></div>
-                    <div class="last-match-content">
-                        <div class="flex justify-end items-center mb-8">
+                    <div class="last-match-content py-4">
+                        <div class="flex justify-end items-center mb-2">
                             <span class="text-xs font-bold uppercase tracking-widest text-gray-300 bg-black/50 px-2 py-1 rounded">${formatDate(lastMatch.Fecha)}</span>
                         </div>
-                        <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-6">
+                        <div class="grid grid-cols-3 gap-2 md:gap-4 items-start text-center mb-2">
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-blue-400 mb-2 md:mb-4">EQUIPO 1</h3>
+                                <h3 class="pt-0 text-3xl md:text-5xl font-display uppercase text-blue-400 mb-1 md:mb-2">EQUIPO 1</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers1}</div>
                             </div>
                             <div class="flex flex-col items-center">
-                                <div class="bg-black/60 border border-white/10 rounded-xl md:rounded-2xl px-3 md:px-6 py-2 md:py-4 mb-6 md:mb-8">
+                                <div class="bg-black/60 border border-white/10 rounded-xl md:rounded-2xl px-3 md:px-6 py-1 md:py-2 mb-2 md:mb-4">
                                     <div class="flex items-center gap-2 md:gap-6">
                                         <span class="text-5xl md:text-8xl font-black text-blue-400 drop-shadow-lg">${lastMatch.Goles_E1}</span>
                                         <span class="text-2xl md:text-4xl text-gray-500">-</span>
                                         <span class="text-5xl md:text-8xl font-black text-red-400 drop-shadow-lg">${lastMatch.Goles_E2}</span>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-center mt-2 md:mt-4">
-                                    <img src="${getPhoto(lastMatch.MVP)}" class="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-2 shadow-lg shadow-yellow-500/20">
+                                <div class="flex flex-col items-center mt-1 md:mt-2">
+                                    <img src="${getPhoto(lastMatch.MVP)}" class="w-14 h-14 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-1 shadow-lg shadow-yellow-500/20">
                                     <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
                                     <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP}</p>
                                 </div>
                             </div>
                             <div class="flex flex-col items-center">
-                                <h3 class="pt-2 text-xl md:text-5xl font-display uppercase text-red-400 mb-2 md:mb-4">EQUIPO 2</h3>
+                                <h3 class="pt-0 text-3xl md:text-5xl font-display uppercase text-red-400 mb-1 md:mb-2">EQUIPO 2</h3>
                                 <div class="text-xs md:text-sm text-gray-200 min-h-[40px]">${scorers2}</div>
                             </div>
                         </div>
-                        <div class="text-right mt-4">
+                        <div class="text-right mt-2">
                             <span class="text-xs font-bold uppercase tracking-widest text-gray-400 bg-black/50 px-2 py-1 rounded">🏟️ ${lastMatch.Estadio || 'St. Diego'}</span>
                         </div>
                     </div>
@@ -357,6 +366,7 @@ function showView(view, param = null) {
             </div>
         `;
     }
+
     else if(view === 'matchDetail') {
         const match = DB['PARTIDOS'].find(m => m.ID_Partido == param);
         const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == param);
@@ -385,12 +395,12 @@ function showView(view, param = null) {
         };
         app.innerHTML = `
             <button onclick="showView('home')" class="btn-back"><- Volver</button>
-            <div class="glass rounded-2xl p-6 mb-8 border border-white/10 text-center relative">
+            <div class="glass rounded-2xl p-4 md:p-6 mb-8 border border-white/10 text-center relative">
                 <div class="absolute top-4 left-4 text-xs text-gray-500 font-bold uppercase bg-black/50 px-2 py-1 rounded">${formatDate(match.Fecha)}</div>
                 <div class="flex justify-between items-center mt-4">
-                    <div class="text-center flex-1"><p class="text-4xl font-black text-blue-400">EQUIPO 1</p></div>
-                    <div class="bg-black px-8 py-4 rounded-xl mx-4 neon-glow border border-white/10"><span class="text-6xl font-black text-blue-400">${match.Goles_E1}</span><span class="text-4xl font-bold text-gray-600 mx-2">-</span><span class="text-6xl font-black text-white">${match.Goles_E2}</span></div>
-                    <div class="text-center flex-1"><p class="text-4xl font-black text-red-400">EQUIPO 2</p></div>
+                    <div class="text-center flex-1"><p class="text-2xl md:text-4xl font-black text-blue-400">EQUIPO 1</p></div>
+                    <div class="bg-black px-4 md:px-8 py-2 md:py-4 rounded-xl mx-2 md:mx-4 neon-glow border border-white/10"><span class="text-4xl md:text-6xl font-black text-blue-400">${match.Goles_E1}</span><span class="text-2xl md:text-4xl font-bold text-gray-600 mx-1 md:mx-2">-</span><span class="text-4xl md:text-6xl font-black text-white">${match.Goles_E2}</span></div>
+                    <div class="text-center flex-1"><p class="text-2xl md:text-4xl font-black text-red-400">EQUIPO 2</p></div>
                 </div>
                 <div class="mt-4 flex items-center justify-center space-x-2 text-yellow-400"><span class="text-xl">🎩</span><p class="font-bold text-lg">MVP: ${match.MVP}</p></div>
             </div>
@@ -555,14 +565,14 @@ function showView(view, param = null) {
             <h1 class="text-5xl font-black text-white uppercase mb-6">Temporadas</h1>
             <div class="flex gap-2 mb-8">${['hist', '1', '2'].map(t => `<button onclick="changeSeason('${t}')" class="flex-1 py-3 rounded-xl font-bold transition ${currentSeason == t ? 'bg-blue-800 text-white' : 'glass text-gray-400'}">${t === 'hist' ? 'Histórica' : 'Temp ' + t}</button>`).join('')}</div>
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-yellow-500 pl-3">Placas de la Temporada</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                <div class="stat-record bg-cyan-500/10"><div class="text-2xl">💎</div><div><p class="text-xs text-gray-500 uppercase">Mejor Overall</p><p class="text-lg font-bold text-cyan-400">${maxOvr.n} (${maxOvr.v})</p></div></div>
-                <div class="stat-record bg-blue-500/10"><div class="text-2xl">⚽</div><div><p class="text-xs text-gray-500 uppercase">Bota de Oro</p><p class="text-lg font-bold text-blue-400">${maxGoles.n} (${maxGoles.v})</p></div></div>
-                <div class="stat-record bg-gray-500/10"><div class="text-2xl">📊</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Jugados</p><p class="text-lg font-bold text-white">${maxPj.n} (${maxPj.v})</p></div></div>
-                <div class="stat-record bg-teal-500/10"><div class="text-2xl">⭐</div><div><p class="text-xs text-gray-500 uppercase">Mejor Promedio</p><p class="text-lg font-bold text-cyan-400">${maxProm.n} (${maxProm.v})</p></div></div>
-                <div class="stat-record bg-green-500/10"><div class="text-2xl">🥇</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Ganados</p><p class="text-lg font-bold text-blue-400">${maxPg.n} (${maxPg.v})</p></div></div>
-                <div class="stat-record bg-red-500/10"><div class="text-2xl">🥉</div><div><p class="text-xs text-gray-500 uppercase">Más Partidos Perdidos</p><p class="text-lg font-bold text-red-400">${maxPp.n} (${maxPp.v})</p></div></div>
-                <div class="stat-record bg-yellow-500/10"><div class="text-2xl">🎩</div><div><p class="text-xs text-gray-500 uppercase">Máximo MVP</p><p class="text-lg font-bold text-yellow-400">${maxMvp.n} (${maxMvp.v})</p></div></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+                <div class="stat-record bg-cyan-500/10 p-3"><div class="text-xl">💎</div><div><p class="text-[10px] text-gray-500 uppercase">Mejor Overall</p><p class="text-sm font-bold text-cyan-400 truncate">${maxOvr.n} <span class="hidden md:inline">(${maxOvr.v})</span></p></div></div>
+                <div class="stat-record bg-blue-500/10 p-3"><div class="text-xl">⚽</div><div><p class="text-[10px] text-gray-500 uppercase">Bota de Oro</p><p class="text-sm font-bold text-blue-400 truncate">${maxGoles.n} <span class="hidden md:inline">(${maxGoles.v})</span></p></div></div>
+                <div class="stat-record bg-gray-500/10 p-3"><div class="text-xl">📊</div><div><p class="text-[10px] text-gray-500 uppercase">Más Partidos</p><p class="text-sm font-bold text-white truncate">${maxPj.n} <span class="hidden md:inline">(${maxPj.v})</span></p></div></div>
+                <div class="stat-record bg-teal-500/10 p-3"><div class="text-xl">⭐</div><div><p class="text-[10px] text-gray-500 uppercase">Mejor Promedio</p><p class="text-sm font-bold text-cyan-400 truncate">${maxProm.n} <span class="hidden md:inline">(${maxProm.v})</span></p></div></div>
+                <div class="stat-record bg-green-500/10 p-3"><div class="text-xl">🥇</div><div><p class="text-[10px] text-gray-500 uppercase">Más Ganados</p><p class="text-sm font-bold text-blue-400 truncate">${maxPg.n} <span class="hidden md:inline">(${maxPg.v})</span></p></div></div>
+                <div class="stat-record bg-red-500/10 p-3"><div class="text-xl">🥉</div><div><p class="text-[10px] text-gray-500 uppercase">Más Perdidos</p><p class="text-sm font-bold text-red-400 truncate">${maxPp.n} <span class="hidden md:inline">(${maxPp.v})</span></p></div></div>
+                <div class="stat-record bg-yellow-500/10 p-3 col-span-2 md:col-span-1"><div class="text-xl">🎩</div><div><p class="text-[10px] text-gray-500 uppercase">Máximo MVP</p><p class="text-sm font-bold text-yellow-400 truncate">${maxMvp.n} <span class="hidden md:inline">(${maxMvp.v})</span></p></div></div>
             </div>
             <h3 class="text-2xl font-black mb-4 text-white border-l-4 border-blue-800 pl-3">Partidos Jugados</h3>
             <div class="space-y-3 mb-8">${matches.length === 0 ? '<p class="text-gray-500">No hay partidos.</p>' : matches.map(p => `<div onclick="showView('matchDetail', '${p.ID_Partido}')" class="glass p-4 rounded-xl flex justify-between items-center hover:bg-white/5 cursor-pointer border border-white/5"><div><p class="text-xs text-gray-500">${formatDate(p.Fecha)} | ${p.Estadio || 'St. Diego'}</p><p class="text-sm font-bold text-white">Equipo 1 vs Equipo 2</p></div><div class="flex items-center gap-4"><span class="text-2xl font-black text-white">${p.Goles_E1} - ${p.Goles_E2}</span></div></div>`).join('')}</div>
@@ -592,15 +602,17 @@ function showView(view, param = null) {
     else if(view === 'duels') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
-            <h1 class="text-5xl font-black text-white uppercase mb-6">⚔️ Duelos</h1>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <select onchange="changeDuelSeason(this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none">
+            <h1 class="text-5xl font-black text-white uppercase mb-6 text-center">⚔️ Duelos</h1>
+            <div class="flex flex-col gap-4 mb-8">
+                <select onchange="changeDuelSeason(this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none w-full">
                     <option value="hist" ${currentDuelSeason == 'hist' ? 'selected' : ''}>Histórica</option>
                     <option value="t1" ${currentDuelSeason == 't1' ? 'selected' : ''}>Temp 1</option>
                     <option value="t2" ${currentDuelSeason == 't2' ? 'selected' : ''}>Temp 2</option>
                 </select>
-                <select id="duel-select-1" onchange="updateDuel(1, this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none"><option value="">Jugador 1</option>${histData.map(p => `<option value="${p.JUGADOR}" ${duelP1Name === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select>
-                <select id="duel-select-2" onchange="updateDuel(2, this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none"><option value="">Jugador 2</option>${histData.map(p => `<option value="${p.JUGADOR}" ${duelP2Name === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select>
+                <div class="grid grid-cols-2 gap-4">
+                    <select id="duel-select-1" onchange="updateDuel(1, this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none text-sm"><option value="">Jugador 1</option>${histData.map(p => `<option value="${p.JUGADOR}" ${duelP1Name === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select>
+                    <select id="duel-select-2" onchange="updateDuel(2, this.value)" class="glass p-3 rounded-xl bg-gray-900 text-white outline-none text-sm"><option value="">Jugador 2</option>${histData.map(p => `<option value="${p.JUGADOR}" ${duelP2Name === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select>
+                </div>
             </div>
             <div id="duel-content">${duelP1Name && duelP2Name ? renderDuel() : '<p class="text-center text-gray-600 mt-10">Selecciona ambos jugadores...</p>'}</div>
         `;
@@ -608,7 +620,7 @@ function showView(view, param = null) {
     else if(view === 'teamGen') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
-            <h1 class="text-5xl font-black text-white uppercase mb-6">⚽ Generador de Equipos</h1>
+          <h1 class="flex items-center gap-3 text-4xl md:text-5xl font-black text-white uppercase mb-6"><span class="text-3xl md:text-4xl">⚽</span> Generador de Equipos</h1>
             <div class="glass p-6 rounded-2xl border border-white/10 mb-6">
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <div>
@@ -646,7 +658,7 @@ function showView(view, param = null) {
             cardGenData.photo = getPhoto(histData[0].JUGADOR);
         }
         app.innerHTML = `
-            <h1 class="text-5xl font-black text-white uppercase mb-6">🃏 Generador de Carta</h1>
+        <h1 class="flex items-center gap-3 text-4xl md:text-5xl font-black text-white uppercase mb-6"><span class="text-3xl md:text-4xl">🃏</span> Generador de Carta</h1>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
                     <h3 class="text-lg font-bold text-gray-300">Diseña tu Carta</h3>
