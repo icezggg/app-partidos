@@ -12,6 +12,26 @@ let teamGenSeason = 'hist';
 let teamGenCriteria = 'OVERALL';
 let currentUser = localStorage.getItem('tecsports_user') || null;
 
+function updateAuthButtons() {
+    const btnPc = document.getElementById('auth-btn-pc');
+    const btnMobile = document.getElementById('auth-btn-mobile');
+    
+    [btnPc, btnMobile].forEach(btn => {
+        if(!btn) return;
+        if(currentUser) {
+            btn.innerText = "Cerrar Sesión";
+            btn.setAttribute('onclick', 'openLogoutModal()');
+            btn.classList.remove('text-green-400', 'hover:text-green-300');
+            btn.classList.add('text-red-400', 'hover:text-red-300');
+        } else {
+            btn.innerText = "Ingresar";
+            btn.setAttribute('onclick', 'openLoginModal()');
+            btn.classList.remove('text-red-400', 'hover:text-red-300');
+            btn.classList.add('text-green-400', 'hover:text-green-300');
+        }
+    });
+}
+
 const n = (val) => {
     if (!val) return 0;
     if (typeof val === 'number') return val;
@@ -236,6 +256,7 @@ function processPhotos(dbData) {
             }
         });
     }
+    updateAuthButtons();
 }
 
 function showView(view, param = null) {
@@ -1081,15 +1102,6 @@ async function checkAdmin() {
 }
 
 function openLoginModal() {
-    if(currentUser) {
-        if(confirm(`Ya estás logueado como ${currentUser}. ¿Querés cerrar sesión?`)) {
-            localStorage.removeItem('tecsports_user');
-            currentUser = null;
-            alert('Sesión cerrada.');
-            showView('home');
-        }
-        return;
-    }
     const users = DB['USUARIOS'] || [];
     const modal = document.createElement('div');
     modal.id = 'login-modal';
@@ -1123,11 +1135,39 @@ async function submitLogin() {
             currentUser = data.user;
             localStorage.setItem('tecsports_user', currentUser);
             showAlert('¡Bienvenido!', `Sesión iniciada como ${currentUser}.`);
+            updateAuthButtons(); 
             showView('home');
         } else {
             alert("PIN incorrecto.");
         }
     } catch(e) { alert("Error de conexión."); }
+}
+
+function openLogoutModal() {
+    const modal = document.createElement('div');
+    modal.id = 'logout-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center">
+            <div class="text-4xl mb-4">👋</div>
+            <h3 class="text-2xl font-display uppercase text-red-400 mb-2 tracking-wide">Cerrar Sesión</h3>
+            <p class="text-gray-300 text-sm mb-6">Estás por cerrar la sesión de <b>${currentUser}</b>. ¿Querés continuar?</p>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('logout-modal').remove()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                <button onclick="submitLogout()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition">Cerrar Sesión</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function submitLogout() {
+    document.getElementById('logout-modal').remove();
+    localStorage.removeItem('tecsports_user');
+    currentUser = null;
+    showAlert('Sesión Cerrada', 'Te deslogueaste correctamente.');
+    updateAuthButtons(); // Actualiza el botón a "Ingresar"
+    showView('home');
 }
 
 function openVoteModal(matchId) {
