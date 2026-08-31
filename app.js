@@ -872,9 +872,18 @@ async function saveNewPlayer() {
     const n = document.getElementById('new_player_name').value, p = document.getElementById('new_player_pos').value; 
     if(!n||!p) return showAlert('Faltan datos', 'Por favor, completá nombre y posición.', 'error'); 
     try { 
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); 
-        showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); await loadData(); setAdminSection('menu'); 
-    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); 
+        const data = await res.json(); 
+        if(data.status === 'success') { 
+            showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); 
+            await loadData(); 
+            setAdminSection('menu'); 
+        } else { 
+            showAlert('Error del Servidor', data.message || 'No se pudo crear.', 'error'); 
+        } 
+    } catch(e) { 
+        showAlert('Error', 'No se pudo conectar.', 'error'); 
+    } 
 }
 async function deleteMatch() { 
     const id = document.getElementById('del_match_select').value; 
