@@ -22,7 +22,7 @@
     </div>
 
     <div style="display:none;" id="app-body">
-        <header class="glass sticky top-0 z-50 w-full border-b border-white/5">
+                <header class="glass sticky top-0 z-50 w-full border-b border-white/5">
             <nav class="flex justify-between items-center p-4 max-w-7xl mx-auto">
                 <div class="flex items-center gap-4">
                     <button onclick="toggleDrawer()" class="md:hidden text-2xl text-gray-300">☰</button>
@@ -42,8 +42,12 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="openLoginModal()" class="sidebar-link font-display tracking-wide text-lg uppercase text-green-400 hover:text-green-300">Ingresar</button>
-                    <button onclick="checkAdmin()" class="sidebar-link font-display tracking-wide text-lg uppercase text-gray-400 hover:text-gray-200">Admin</button>
+                    
+                    <!-- SEPARADOR Y BOTONES A LA DERECHA -->
+                    <div class="flex items-center gap-2 ml-6 pl-6 border-l border-white/10">
+                        <button id="auth-btn-pc" onclick="openLoginModal()" class="sidebar-link font-display tracking-wide text-lg uppercase text-green-400 hover:text-green-300">Ingresar</button>
+                        <button onclick="checkAdmin()" class="sidebar-link font-display tracking-wide text-lg uppercase text-gray-400 hover:text-gray-200">Admin</button>
+                    </div>
                 </div>
                 <button onclick="checkAdmin()" class="md:hidden text-gray-400 text-3xl">⚙️</button>
             </nav>
@@ -63,9 +67,11 @@
                 <a href="#" onclick="toggleDrawer(); showView('cardGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">🃏 Gen. Carta</a>
                 <a href="#" onclick="toggleDrawer(); showView('teamGen')" class="sidebar-link text-2xl font-display tracking-wide uppercase">⚽ Gen. Equipos</a>
             </nav>
-            <div class="p-8 border-t border-white/10">
-                <button onclick="toggleDrawer(); checkAdmin()" class="sidebar-link text-xl text-gray-400 hover:text-white transition uppercase font-display tracking-wide">⚙️ Admin</button>
-                <button onclick="toggleDrawer(); openLoginModal()" class="sidebar-link text-2xl font-display tracking-wide uppercase text-green-400">Ingresar</button>
+            
+            <!-- BOTONES ABAJO PEGADOS AL BORDE INFERIOR -->
+            <div class="p-6 border-t border-white/10 flex gap-4">
+                <button id="auth-btn-mobile" onclick="openLoginModal()" class="sidebar-link text-xl flex-1 text-center text-green-400 hover:text-green-300 uppercase font-display tracking-wide">Ingresar</button>
+                <button onclick="toggleDrawer(); checkAdmin()" class="sidebar-link text-xl flex-1 text-center text-gray-400 hover:text-white uppercase font-display tracking-wide">⚙️ Admin</button>
             </div>
         </div>
 
