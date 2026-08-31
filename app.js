@@ -1251,13 +1251,11 @@ async function submitVote(matchId) {
     
     details.forEach(d => {
         if (d.Jugador === currentUser) {
-            notas[d.Jugador] = 0; // El vota 0 para si mismo para no afectar el promedio
+            notas[d.Jugador] = 0;
         } else {
             const inputElem = document.getElementById(`vote-note-${d.Jugador.replace(/\s/g, '_')}`);
             const inputVal = inputElem.value;
             const notaNum = parseFloat(inputVal);
-            
-            // Validar que sea número, esté en rango, y que sea múltiplo de 0.25
             const isStepValid = (notaNum * 100) % 25 === 0;
             
             if (!inputVal || isNaN(notaNum) || notaNum < 1 || notaNum > 10 || !isStepValid) {
@@ -1271,18 +1269,41 @@ async function submitVote(matchId) {
 
     if (!valid) return showAlert('Error de Notas', errorMsg, 'error');
 
+    // Desactivar el botón para evitar dobles clics
+    const submitBtn = document.querySelector('#vote-modal button.bg-yellow-600');
+    if(submitBtn) {
+        submitBtn.innerText = 'Enviando...';
+        submitBtn.disabled = true;
+    }
+
     try {
         const res = await fetch(API_URL, { 
             method: 'POST', 
             body: JSON.stringify({ action: 'submitVote', MatchID: matchId, Nombre: currentUser, MVP: mvp, NotasJSON: JSON.stringify(notas) }) 
         });
         const data = await res.json();
+        
+        document.getElementById('vote-modal').remove();
+        
         if(data.status === 'success') {
-            document.getElementById('vote-modal').remove();
+            // ACTUALIZACIÓN INSTANTÁNEA (Sin esperar a Google)
+            if (!DB['VOTACIONES']) DB['VOTACIONES'] = [];
+            DB['VOTACIONES'].push({
+                ID_Partido: matchId,
+                Votador: currentUser,
+                MVP: mvp,
+                Notas: JSON.stringify(notas)
+            });
+            localStorage.setItem('tecSportsDB', JSON.stringify(DB)); // Guardamos en la caché del celular
+            
             showAlert('¡Voto Enviado!', 'Tu voto fue registrado correctamente.');
-            await loadData();
+            showView('home'); // Recarga el inicio instantáneamente con el botón oculto
+        } else {
+            // Si el Excel dice "Ya votaste", mostramos este mensaje
+            showAlert('Atención', data.message || 'No se pudo registrar.', 'error');
             showView('home');
         }
+        
     } catch(e) { 
         showAlert('Error', 'No se pudo conectar.', 'error'); 
     }
