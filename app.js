@@ -1209,22 +1209,23 @@ function openVoteModal(matchId) {
     modal.className = 'admin-modal-overlay';
     modal.innerHTML = `
         <div class="admin-modal-box text-center" style="max-width: 500px;">
-            <h3 class="text-2xl font-display uppercase text-yellow-400 mb-2 tracking-wide">🗳️ Votación Anónima</h3>
-            <p class="text-gray-500 text-sm mb-6">Votás como: <b>${currentUser}</b></p>
+            <h3 class="text-2xl font-display uppercase text-yellow-400 mb-2 tracking-wide">🗳️ Votación</h3>
+            <p class="text-gray-500 text-sm mb-4">Votás como: <b>${currentUser}</b></p>
+            <p class="text-gray-600 text-xs mb-6 italic">No podés votarte a vos mismo. Las notas van de 1 a 10 (saltando de 0.25 en 0.25).</p>
             
             <div class="mb-4 text-left">
                 <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido</label>
                 <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-white/10">
-                    ${details.map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
+                    ${details.map(d => `<option value="${d.Jugador}" ${d.Jugador === currentUser ? 'disabled' : ''}>${d.Jugador} (Eq ${d.Equipo}) ${d.Jugador === currentUser ? '(Vos)' : ''}</option>`).join('')}
                 </select>
             </div>
 
             <div class="mb-6 max-h-60 overflow-y-auto text-left pr-2">
-                <label class="text-gray-300 text-sm font-bold block mb-2">Notas de los Jugadores (1-10)</label>
+                <label class="text-gray-300 text-sm font-bold block mb-2">Notas de los Jugadores (1 a 10)</label>
                 ${details.map(d => `
                     <div class="flex items-center justify-between gap-4 mb-3">
                         <span class="text-white text-sm">${d.Jugador} <span class="text-gray-500 text-xs">(Eq ${d.Equipo})</span></span>
-                        <input type="number" min="1" max="10" step="0.5" id="vote-note-${d.Jugador.replace(/\s/g, '_')}" placeholder="0" class="w-20 bg-gray-900 text-white p-2 rounded-lg border border-white/10 text-center">
+                        <input type="number" min="1" max="10" step="any" id="vote-note-${d.Jugador.replace(/\s/g, '_')}" placeholder="Ej: 6.50" class="w-24 bg-gray-900 text-white p-2 rounded-lg border border-white/10 text-center" ${d.Jugador === currentUser ? 'disabled value="N/A" style="opacity: 0.5"' : ''}>
                     </div>
                 `).join('')}
             </div>
@@ -1240,15 +1241,35 @@ async function submitVote(matchId) {
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
     const mvp = document.getElementById('vote-mvp').value;
     
+    if (mvp === currentUser) {
+        return showAlert('Error', 'No podés votarte a vos mismo como MVP.', 'error');
+    }
+
     let notas = {};
     let valid = true;
+    let errorMsg = '';
+    
     details.forEach(d => {
-        const inputVal = document.getElementById(`vote-note-${d.Jugador.replace(/\s/g, '_')}`).value;
-        if(!inputVal) valid = false;
-        notas[d.Jugador] = parseFloat(inputVal) || 0;
+        if (d.Jugador === currentUser) {
+            notas[d.Jugador] = 0; // El vota 0 para si mismo para no afectar el promedio
+        } else {
+            const inputElem = document.getElementById(`vote-note-${d.Jugador.replace(/\s/g, '_')}`);
+            const inputVal = inputElem.value;
+            const notaNum = parseFloat(inputVal);
+            
+            // Validar que sea número, esté en rango, y que sea múltiplo de 0.25
+            const isStepValid = (notaNum * 100) % 25 === 0;
+            
+            if (!inputVal || isNaN(notaNum) || notaNum < 1 || notaNum > 10 || !isStepValid) {
+                valid = false;
+                errorMsg = 'Las notas deben ir de 1 a 10, saltando de 0.25 en 0.25 (Ej: 5.25, 6.50, 7.75).';
+            } else {
+                notas[d.Jugador] = notaNum;
+            }
+        }
     });
 
-    if(!valid) return alert("Por favor, completá la nota de todos los jugadores.");
+    if (!valid) return showAlert('Error de Notas', errorMsg, 'error');
 
     try {
         const res = await fetch(API_URL, { 
@@ -1262,7 +1283,9 @@ async function submitVote(matchId) {
             await loadData();
             showView('home');
         }
-    } catch(e) { alert("Error al enviar el voto."); }
+    } catch(e) { 
+        showAlert('Error', 'No se pudo conectar.', 'error'); 
+    }
 }
 
 async function submitAdminPass() {
