@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwG-jkQ120wbMnNokuBCnHrQZtp3BG6sXxwvNyTxPOkvZH0kKdDpiDkKE8UyY5gjrux/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby2JWYT32erlmqfYf7NagCo86myv8LEJgQSDelWPbsiTbmpkkA9cLbjL6s9gulgEAXv/exec";
 let DB = {}; let photosMap = {};
 let voteID = localStorage.getItem('tecsports_voter_id');
 if(!voteID) { voteID = 'voter_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('tecsports_voter_id', voteID); }
