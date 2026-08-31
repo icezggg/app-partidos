@@ -1101,6 +1101,26 @@ async function checkAdmin() {
     document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
 }
 
+function updateAuthButtons() {
+    const btnPc = document.getElementById('auth-btn-pc');
+    const btnMobile = document.getElementById('auth-btn-mobile');
+    
+    [btnPc, btnMobile].forEach(btn => {
+        if(!btn) return;
+        if(currentUser) {
+            btn.innerText = "Cerrar Sesión";
+            btn.setAttribute('onclick', 'openLogoutModal()');
+            btn.classList.remove('text-green-400', 'hover:text-green-300');
+            btn.classList.add('text-red-400', 'hover:text-red-300');
+        } else {
+            btn.innerText = "Ingresar";
+            btn.setAttribute('onclick', 'openLoginModal()');
+            btn.classList.remove('text-red-400', 'hover:text-red-300');
+            btn.classList.add('text-green-400', 'hover:text-green-300');
+        }
+    });
+}
+
 function openLoginModal() {
     const users = DB['USUARIOS'] || [];
     const modal = document.createElement('div');
@@ -1135,12 +1155,12 @@ async function submitLogin() {
             currentUser = data.user;
             localStorage.setItem('tecsports_user', currentUser);
             showAlert('¡Bienvenido!', `Sesión iniciada como ${currentUser}.`);
-            updateAuthButtons(); 
+            updateAuthButtons(); // CAMBIA EL BOTÓN A ROJO
             showView('home');
         } else {
-            alert("PIN incorrecto.");
+            showAlert('Error', 'PIN incorrecto.', 'error');
         }
-    } catch(e) { alert("Error de conexión."); }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
 }
 
 function openLogoutModal() {
@@ -1166,9 +1186,10 @@ function submitLogout() {
     localStorage.removeItem('tecsports_user');
     currentUser = null;
     showAlert('Sesión Cerrada', 'Te deslogueaste correctamente.');
-    updateAuthButtons(); // Actualiza el botón a "Ingresar"
+    updateAuthButtons(); // VUELVE A DECIR "INGRESAR" EN VERDE
     showView('home');
 }
+
 
 function openVoteModal(matchId) {
     const match = DB['PARTIDOS'].find(m => m.ID_Partido == matchId);
