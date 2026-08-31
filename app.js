@@ -1,5 +1,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwG-jkQ120wbMnNokuBCnHrQZtp3BG6sXxwvNyTxPOkvZH0kKdDpiDkKE8UyY5gjrux/exec";
 let DB = {}; let photosMap = {};
+let voteID = localStorage.getItem('tecsports_voter_id');
+if(!voteID) { voteID = 'voter_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('tecsports_voter_id', voteID); }
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
 let adminSection = 'menu'; let adminPassword = null;
@@ -8,6 +10,7 @@ let teamGenPlayers = [];
 let cardGenData = { name: '', ovr: 75, pos: 'DC', stats: { rit: 75, tir: 75, pas: 75, reg: 75, def: 75, fis: 75 }, photo: '' };
 let teamGenSeason = 'hist';
 let teamGenCriteria = 'OVERALL';
+let currentUser = localStorage.getItem('tecsports_user') || null;
 
 const n = (val) => {
     if (!val) return 0;
@@ -246,15 +249,33 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
-        
         const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
+
+        // LÓGICA DE VOTACIÓN
+        // LÓGICA DE VOTACIÓN RESTRINGIDA
+        const votes = DB['VOTACIONES'] || [];
+        const alreadyVoted = votes.some(v => v.ID_Partido == lastMatch?.ID_Partido && v.Votador == currentUser);
+        const votingOpen = lastMatch && (!lastMatch.MVP || lastMatch.MVP === '');
+        
+        let voteBanner = '';
+        if(votingOpen) {
+            const matchDetails = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
+            const playedInMatch = currentUser && matchDetails.some(d => d.Jugador === currentUser);
+            
+            if(playedInMatch && !alreadyVoted) {
+                voteBanner = `<button onclick="openVoteModal('${lastMatch.ID_Partido}')" class="w-full mb-8 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black py-4 rounded-xl text-lg uppercase tracking-wide animate-pulse">🗳️ ¡Votá al MVP y las Notas del último partido!</button>`;
+            } else if(playedInMatch && alreadyVoted) {
+                voteBanner = `<div class="w-full mb-8 bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">✅ Ya registraste tu voto. ¡Gracias!</div>`;
+            } else if(!currentUser) {
+                voteBanner = `<div class="w-full mb-8 bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">Ingresá con tu usuario para votar al MVP</div>`;
+            }
+        }
 
         let matchCardHTML = '<div class="glass p-8 rounded-2xl border border-white/10 h-full flex items-center justify-center"><p class="text-gray-500">No hay partidos cargados aún.</p></div>';
         if (lastMatch) {
             const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
             const e1 = details.filter(d => String(d.Equipo).includes('1'));
             const e2 = details.filter(d => String(d.Equipo).includes('2'));
-            
             const formatScorers = (teamArray) => {
                 const scorers = teamArray.filter(p => n(p.Goles) > 0).map(p => `${p.Jugador} (${n(p.Goles)})`);
                 return scorers.length > 0 ? scorers.join('<br>') : 'Sin goles';
@@ -285,7 +306,7 @@ function showView(view, param = null) {
                                 <div class="flex flex-col items-center mt-1 md:mt-2">
                                     <img src="${getPhoto(lastMatch.MVP)}" class="w-14 h-14 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-1 shadow-lg shadow-yellow-500/20">
                                     <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
-                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP}</p>
+                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP || 'Pendiente'}</p>
                                 </div>
                             </div>
                             <div class="flex flex-col items-center">
@@ -305,6 +326,7 @@ function showView(view, param = null) {
 
         app.innerHTML = `
             <div class="flex flex-col gap-8">
+                ${voteBanner}
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 flex flex-col">
                         <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Último Partido</h2>
@@ -1056,6 +1078,121 @@ async function checkAdmin() {
     document.body.appendChild(modal);
     document.getElementById('admin-pass-input').focus();
     document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
+}
+
+function openLoginModal() {
+    if(currentUser) {
+        if(confirm(`Ya estás logueado como ${currentUser}. ¿Querés cerrar sesión?`)) {
+            localStorage.removeItem('tecsports_user');
+            currentUser = null;
+            alert('Sesión cerrada.');
+            showView('home');
+        }
+        return;
+    }
+    const users = DB['USUARIOS'] || [];
+    const modal = document.createElement('div');
+    modal.id = 'login-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center">
+            <h3 class="text-2xl font-display uppercase text-green-400 mb-2 tracking-wide">Ingresar</h3>
+            <p class="text-gray-500 text-sm mb-6">Selecciona tu nombre y poné tu PIN de 4 dígitos</p>
+            <select id="login-name" class="w-full bg-gray-900 text-white p-3 rounded-xl mb-4 outline-none border border-white/10">
+                ${users.map(u => `<option value="${u}">${u}</option>`).join('')}
+            </select>
+            <input type="password" id="login-pin" placeholder="PIN" maxlength="4" class="w-full bg-gray-900 text-white p-3 rounded-xl mb-4 outline-none border border-white/10 text-center text-lg tracking-widest">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('login-modal').remove()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                <button onclick="submitLogin()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition">Ingresar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function submitLogin() {
+    const name = document.getElementById('login-name').value;
+    const pin = document.getElementById('login-pin').value;
+    document.getElementById('login-modal').remove();
+    
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', Nombre: name, PIN: pin }) });
+        const data = await res.json();
+        if(data.status === 'success') {
+            currentUser = data.user;
+            localStorage.setItem('tecsports_user', currentUser);
+            showAlert('¡Bienvenido!', `Sesión iniciada como ${currentUser}.`);
+            showView('home');
+        } else {
+            alert("PIN incorrecto.");
+        }
+    } catch(e) { alert("Error de conexión."); }
+}
+
+function openVoteModal(matchId) {
+    const match = DB['PARTIDOS'].find(m => m.ID_Partido == matchId);
+    const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
+
+    const modal = document.createElement('div');
+    modal.id = 'vote-modal';
+    modal.className = 'admin-modal-overlay';
+    modal.innerHTML = `
+        <div class="admin-modal-box text-center" style="max-width: 500px;">
+            <h3 class="text-2xl font-display uppercase text-yellow-400 mb-2 tracking-wide">🗳️ Votación Anónima</h3>
+            <p class="text-gray-500 text-sm mb-6">Votás como: <b>${currentUser}</b></p>
+            
+            <div class="mb-4 text-left">
+                <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido</label>
+                <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-white/10">
+                    ${details.map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
+                </select>
+            </div>
+
+            <div class="mb-6 max-h-60 overflow-y-auto text-left pr-2">
+                <label class="text-gray-300 text-sm font-bold block mb-2">Notas de los Jugadores (1-10)</label>
+                ${details.map(d => `
+                    <div class="flex items-center justify-between gap-4 mb-3">
+                        <span class="text-white text-sm">${d.Jugador} <span class="text-gray-500 text-xs">(Eq ${d.Equipo})</span></span>
+                        <input type="number" min="1" max="10" step="0.5" id="vote-note-${d.Jugador.replace(/\s/g, '_')}" placeholder="0" class="w-20 bg-gray-900 text-white p-2 rounded-lg border border-white/10 text-center">
+                    </div>
+                `).join('')}
+            </div>
+
+            <button onclick="submitVote('${matchId}')" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition">Enviar Voto</button>
+            <button onclick="document.getElementById('vote-modal').remove()" class="w-full mt-2 text-gray-500 text-sm hover:text-white transition">Cancelar</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function submitVote(matchId) {
+    const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
+    const mvp = document.getElementById('vote-mvp').value;
+    
+    let notas = {};
+    let valid = true;
+    details.forEach(d => {
+        const inputVal = document.getElementById(`vote-note-${d.Jugador.replace(/\s/g, '_')}`).value;
+        if(!inputVal) valid = false;
+        notas[d.Jugador] = parseFloat(inputVal) || 0;
+    });
+
+    if(!valid) return alert("Por favor, completá la nota de todos los jugadores.");
+
+    try {
+        const res = await fetch(API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'submitVote', MatchID: matchId, Nombre: currentUser, MVP: mvp, NotasJSON: JSON.stringify(notas) }) 
+        });
+        const data = await res.json();
+        if(data.status === 'success') {
+            document.getElementById('vote-modal').remove();
+            showAlert('¡Voto Enviado!', 'Tu voto fue registrado correctamente.');
+            await loadData();
+            showView('home');
+        }
+    } catch(e) { alert("Error al enviar el voto."); }
 }
 
 async function submitAdminPass() {
