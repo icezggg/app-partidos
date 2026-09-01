@@ -323,8 +323,7 @@ function showView(view, param = null) {
         const records = calculateRecords();
         const esquinaBg = photosMap['ESQUINA'] || svgPlaceholder(1920, 1080, 'TecSports');
 
-        // LÓGICA DE VOTACIÓN
-        // LÓGICA DE VOTACIÓN RESTRINGIDA
+        // LÓGICA DE VOTACIÓN + BARRA DE PROGRESO
         const votes = DB['VOTACIONES'] || [];
         const mvpName = cleanVal(lastMatch?.MVP); // FIX: el Excel usa '*' como vacío
         const alreadyVoted = votes.some(v => v.ID_Partido == lastMatch?.ID_Partido && v.Votador == currentUser);
@@ -335,12 +334,56 @@ function showView(view, param = null) {
             const matchDetails = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == lastMatch.ID_Partido);
             const playedInMatch = currentUser && matchDetails.some(d => d.Jugador === currentUser);
             
+            // Barra de progreso: X de Y que jugaron ya votaron
+            const totalVoters = matchDetails.length;
+            const votesCount = votes.filter(v => v.ID_Partido == lastMatch.ID_Partido).length;
+            const pct = totalVoters > 0 ? Math.min(100, Math.round((votesCount / totalVoters) * 100)) : 0;
+            const remaining = Math.max(0, totalVoters - votesCount);
+            const allDone = totalVoters > 0 && remaining === 0;
+            
+            let progressText;
+            if (allDone) progressText = '¡Todos votaron! El admin ya puede cerrar 🗳️';
+            else if (votesCount === 0) progressText = `Aún nadie votó (0/${totalVoters})`;
+            else progressText = `Faltan ${remaining} (${votesCount}/${totalVoters})`;
+            
+            const progressBar = totalVoters > 0 ? `
+                <div class="mt-3 flex items-center gap-3">
+                    <div class="flex-grow bg-gray-900/80 rounded-full h-2.5 overflow-hidden border border-white/10">
+                        <div class="h-2.5 rounded-full transition-all duration-500 ${allDone ? 'bg-gradient-to-r from-green-600 to-green-400' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-wide whitespace-nowrap ${allDone ? 'text-green-400' : 'text-gray-400'}">${progressText}</span>
+                </div>
+            ` : '';
+            
             if(playedInMatch && !alreadyVoted) {
-                voteBanner = `<button onclick="openVoteModal('${lastMatch.ID_Partido}')" class="w-full mb-8 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black py-4 rounded-xl text-lg uppercase tracking-wide animate-pulse">🗳️ ¡Votá al MVP y las Notas del último partido!</button>`;
+                voteBanner = `
+                    <div class="w-full">
+                        <button onclick="openVoteModal('${lastMatch.ID_Partido}')" class="w-full bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black py-4 rounded-xl text-lg uppercase tracking-wide animate-pulse">🗳️ ¡Votá al MVP y las Notas del último partido!</button>
+                        ${progressBar}
+                    </div>
+                `;
             } else if(playedInMatch && alreadyVoted) {
-                voteBanner = `<div class="w-full mb-8 bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">✅ Ya registraste tu voto. ¡Gracias!</div>`;
+                voteBanner = `
+                    <div class="w-full">
+                        <div class="w-full bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">✅ Ya registraste tu voto. ¡Gracias!</div>
+                        ${progressBar}
+                    </div>
+                `;
             } else if(!currentUser) {
-                voteBanner = `<div class="w-full mb-8 bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">Ingresá con tu usuario para votar al MVP</div>`;
+                voteBanner = `
+                    <div class="w-full">
+                        <div class="w-full bg-gray-800 text-gray-400 font-bold py-4 rounded-xl text-center">Ingresá con tu usuario para votar al MVP</div>
+                        ${progressBar}
+                    </div>
+                `;
+            } else {
+                // Jugador logueado que no jugó este partido: antes no veía nada, ahora sigue el escrutinio
+                voteBanner = `
+                    <div class="w-full">
+                        <div class="w-full glass text-gray-300 font-bold py-4 rounded-xl text-center">🗳️ Votación abierta para los que jugaron</div>
+                        ${progressBar}
+                    </div>
+                `;
             }
         }
 
