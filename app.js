@@ -46,44 +46,6 @@ const cleanVal = (v) => { const s = String(v == null ? '' : v).trim(); return (s
 function isBlank(v) { return cleanVal(v) === ''; }
 function fixBrokenImg(el, w, h, text) { el.onerror = null; el.src = svgPlaceholder(w, h, text); }
 
-function updateCardPreview() {
-    const ovr = n(cardGenData.ovr);
-    const cardType = getCardType(ovr);
-    const templateNames = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' };
-    const templateName = templateNames[cardType];
-    const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID ' + templateName);
-    const photo = cardGenData.photo || svgPlaceholder(150, 150, cardGenData.name ? String(cardGenData.name).charAt(0) : '?');
-    const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
-    document.getElementById('card_preview').innerHTML = `
-        <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <img src="${cardBg}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
-            <div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 55px 24px 24px;">
-                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 18px;">
-                    <div style="text-align: center; color: ${txtColor};">
-                        <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif; margin: 0;">${ovr}</p>
-                        <p style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0;">${cardGenData.pos}</p>
-                    </div>
-                    <div style="width: 110px; height: 125px; overflow: hidden;">
-                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-                    </div>
-                </div>
-                <p style="margin: 12px 0 0 0; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
-                <div style="margin-top: auto; display: flex; gap: 45px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
 
 const getPhoto = (name) => photosMap[name] || svgPlaceholder(150, 150, name ? String(name).charAt(0).toUpperCase() : '?');
 
@@ -1199,25 +1161,29 @@ function updateCardPreview() {
     const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
     document.getElementById('card_preview').innerHTML = `
         <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')"
-            <div style="position: absolute; top: 65px; left: 67px; text-align: center; color: ${txtColor};">
-                <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
-                <p style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">${cardGenData.pos}</p>
-            </div>
-            <div style="position: absolute; top: 87px; left: 51%; transform: translateX(-50%); width: 110px; height: 125px;">
-                <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-            <p style="position: absolute; top: 225px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
-            <div style="position: absolute; bottom: 71px; width: 100%; display: flex; justify-content: center; gap: 50px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
+            <img src="${cardBg}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
+            <div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 55px 24px 24px;">
+                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 18px;">
+                    <div style="position: relative; top: 8px; left: 3px; text-align: center; color: ${txtColor};">
+                        <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif; margin: 0;">${ovr}</p>
+                        <p style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0;">${cardGenData.pos}</p>
+                    </div>
+                    <div style="position: relative; top: 35px; left: -25px; width: 110px; height: 125px; overflow: hidden;">
+                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
+                    </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
+                <p style="position: relative; top: 40px; left: 2px; margin: 12px 0 0 0; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
+                <div style="position: relative; top: -50px; margin-top: auto; display: flex; gap: 45px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
+                    </div>
                 </div>
             </div>
         </div>
