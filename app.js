@@ -1,7 +1,5 @@
-const API_URL = "https://script.google.com/macros/s/AKfycby2JWYT32erlmqfYf7NagCo86myv8LEJgQSDelWPbsiTbmpkkA9cLbjL6s9gulgEAXv/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_8gIn4bAGzr3Cs2ts8WsaKfzihpEOGWqfAM2c2hXS_dFz/exec";
 let DB = {}; let photosMap = {};
-let voteID = localStorage.getItem('tecsports_voter_id');
-if(!voteID) { voteID = 'voter_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('tecsports_voter_id', voteID); }
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
 let adminSection = 'menu'; let adminPassword = null;
@@ -38,12 +36,55 @@ const n = (val) => {
     let str = String(val).replace(',', '.').replace(/[^0-9.-]/g, '');
     return isNaN(str) || str === '' ? 0 : Number(str);
 };
-const getPhoto = (name) => photosMap[name] || "https://via.placeholder.com/150";
+function svgPlaceholder(w, h, text) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#1f2937"/><text x="50%" y="50%" fill="#6b7280" font-family="Arial" font-size="${Math.round(h/12)}" font-weight="bold" text-anchor="middle" dy=".35em">${text || ''}</text></svg>`;
+    return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+function fixBrokenImg(el, w, h, text) { el.onerror = null; el.src = svgPlaceholder(w, h, text); }
+
+function updateCardPreview() {
+    const ovr = n(cardGenData.ovr);
+    const cardType = getCardType(ovr);
+    const templateNames = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' };
+    const templateName = templateNames[cardType];
+    const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID ' + templateName);
+    const photo = cardGenData.photo || svgPlaceholder(150, 150, cardGenData.name ? String(cardGenData.name).charAt(0) : '?');
+    const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
+    document.getElementById('card_preview').innerHTML = `
+        <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
+            <div style="position: absolute; top: 65px; left: 67px; text-align: center; color: ${txtColor};">
+                <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
+                <p style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">${cardGenData.pos}</p>
+            </div>
+            <div style="position: absolute; top: 87px; left: 51%; transform: translateX(-50%); width: 110px; height: 125px;">
+                <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
+            </div>
+            <p style="position: absolute; top: 225px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
+            <div style="position: absolute; bottom: 71px; width: 100%; display: flex; justify-content: center; gap: 50px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
+                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+const getPhoto = (name) => photosMap[name] || svgPlaceholder(150, 150, name ? String(name).charAt(0).toUpperCase() : '?');
 
 const toInputDate = (dateStr) => {
     if (!dateStr) return '';
     try { const d = new Date(dateStr); if (isNaN(d.getTime())) return ''; return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; } catch (e) { return ''; }
 };
+
+const todayInput = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
 function getSeasonData(seasonKey) {
     if (seasonKey === 't1' || seasonKey === '1') return DB['TEMP 1'] || DB['Temp 1'] || DB['TEMP1'] || [];
@@ -210,34 +251,47 @@ function getTeammatesAndRivals(playerName) {
 }
 
 async function loadData() {
+    let renderedInitial = false;
     try {
         const cachedDB = localStorage.getItem('tecSportsDB');
-        if(cachedDB) {
+        const isFirstLoad = document.getElementById('app-body').style.display === 'none';
+
+        // 1) Primera carga con caché → pintar al instante
+        if (cachedDB && isFirstLoad) {
             DB = JSON.parse(cachedDB);
             processPhotos(DB);
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
             const initialRoute = getRouteFromUrl();
-            showView(initialRoute.view, initialRoute.param); // Usa la ruta de la URL
+            showView(initialRoute.view, initialRoute.param);
+            renderedInitial = true;
         }
-        
+
+        // 2) Data fresca SIEMPRE
         const res = await fetch(API_URL + '?t=' + Date.now());
         DB = await res.json();
         localStorage.setItem('tecSportsDB', JSON.stringify(DB));
         processPhotos(DB);
-        
-        if(!cachedDB) {
+
+        // 3) Renderizar o refrescar en silencio (sin ensuciar el historial)
+        if (!renderedInitial && isFirstLoad) {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-body').style.display = 'block';
             const initialRoute = getRouteFromUrl();
             showView(initialRoute.view, initialRoute.param);
-        } else {
-            // Si ya estaba renderizada, la actualizamos silenciosamente
-            const currentView = document.querySelector('.sidebar-link.active')?.getAttribute('onclick').match(/'([^']+)'/)[1] || 'home';
-            showView(currentView);
+        } else if (renderedInitial) {
+            const v = window.currentView;
+            if (v && ['home', 'players', 'seasons', 'duels', 'matchDetail', 'playerProfile'].includes(v.name)) {
+                window.isRouting = true;
+                try { showView(v.name, v.param); } finally { window.isRouting = false; }
+            }
         }
     } catch (e) {
-        document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión.</p>';
+        if (Object.keys(DB).length === 0) {
+            document.getElementById('loader').innerHTML = '<p class="text-red-500 font-bold p-4 text-center">Error de conexión.</p>';
+        } else {
+            console.warn('No se pudo refrescar la data, usando cache:', e);
+        }
     }
 }
 
@@ -260,6 +314,8 @@ function processPhotos(dbData) {
 }
 
 function showView(view, param = null) {
+    const isRedraw = window.currentView && window.currentView.name === view; // FIX: re-render de la misma vista
+    window.currentView = { name: view, param: param };
     const app = document.getElementById('app-view');
     if(Object.keys(DB).length === 0) return;
     
@@ -270,7 +326,7 @@ function showView(view, param = null) {
         const inicioData = DB['INICIO'] || [];
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
-        const esquinaBg = photosMap['ESQUINA'] || 'https://via.placeholder.com/1920x1080?text=TecSports';
+        const esquinaBg = photosMap['ESQUINA'] || svgPlaceholder(1920, 1080, 'TecSports');
 
         // LÓGICA DE VOTACIÓN
         // LÓGICA DE VOTACIÓN RESTRINGIDA
@@ -411,7 +467,8 @@ function showView(view, param = null) {
     }
 
     else if(view === 'matchDetail') {
-        const match = DB['PARTIDOS'].find(m => m.ID_Partido == param);
+        const match = (DB['PARTIDOS'] || []).find(m => m.ID_Partido == param);
+        if(!match) return showView('home'); // FIX: partido inexistente → home
         const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == param);
         const e1 = details.filter(d => String(d.Equipo).includes('1'));
         const e2 = details.filter(d => String(d.Equipo).includes('2'));
@@ -445,7 +502,7 @@ function showView(view, param = null) {
                     <div class="bg-black px-4 md:px-8 py-2 md:py-4 rounded-xl mx-2 md:mx-4 neon-glow border border-white/10"><span class="text-4xl md:text-6xl font-black text-blue-400">${match.Goles_E1}</span><span class="text-2xl md:text-4xl font-bold text-gray-600 mx-1 md:mx-2">-</span><span class="text-4xl md:text-6xl font-black text-white">${match.Goles_E2}</span></div>
                     <div class="text-center flex-1"><p class="text-2xl md:text-4xl font-black text-red-400">EQUIPO 2</p></div>
                 </div>
-                <div class="mt-4 flex items-center justify-center space-x-2 text-yellow-400"><span class="text-xl">🎩</span><p class="font-bold text-lg">MVP: ${match.MVP}</p></div>
+                <div class="mt-4 flex items-center justify-center space-x-2 text-yellow-400"><span class="text-xl">🎩</span><p class="font-bold text-lg">MVP: ${match.MVP || 'Pendiente'}</p>
             </div>
             <div class="pitch rounded-3xl p-4 relative w-full aspect-[16/9] mb-8 overflow-hidden">
                 <div class="pitch-line-center"></div><div class="pitch-circle-center"></div><div class="pitch-box-left"></div><div class="pitch-box-right"></div><div class="pitch-goal-left"></div><div class="pitch-goal-right"></div>
@@ -488,7 +545,7 @@ function showView(view, param = null) {
         `;
     }
     else if(view === 'playerProfile') {
-        const hist = DB['HISTORICA'].find(j => j.JUGADOR === param);
+        const hist = (DB['HISTORICA'] || []).find(j => j.JUGADOR === param);
         if(!hist) return showView('players');
         const tempData = getSeasonData(currentProfileSeason);
         const s = tempData.find(j => j.JUGADOR === param) || hist;
@@ -497,7 +554,7 @@ function showView(view, param = null) {
         const fifaStats = generateFifaStats(s); 
         const { bestMate, worstRival, stadiumStats } = getTeammatesAndRivals(param); 
         const templateName = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' }[cardType];
-        const cardBg = photosMap[templateName] || "https://via.placeholder.com/300x420?text=Falta+ID";
+        const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID CARTA');
         const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
         const cardHTML = `
             <div style="width: 280px; height: 392px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto;">
@@ -724,9 +781,12 @@ function showView(view, param = null) {
         `;
         updateCardPreview();
     }
-    else if(view === 'admin') { renderAdmin(); }
+    else if(view === 'admin') { 
+        if (!adminPassword) return showView('home'); // FIX: sin clave no hay panel
+        renderAdmin(); 
+    }
     
-    window.scrollTo(0, 0);
+    if (!isRedraw) window.scrollTo(0, 0); // FIX: no scrollear en re-render de la misma vista
     if (!window.isRouting) {
         let url = BASE_URL + view;
         if (param) url += '/' + encodeURIComponent(param);
@@ -741,7 +801,7 @@ function renderPlayersGrid(query = '', sortBy = 'default') {
     let dataToRender = histData.filter(p => String(p.JUGADOR).toLowerCase().includes(query.toLowerCase()));
     if (sortBy === 'name') dataToRender.sort((a,b) => String(a.JUGADOR).localeCompare(String(b.JUGADOR)));
     else if (sortBy === 'ovr') dataToRender.sort((a,b) => n(b.OVERALL) - n(a.OVERALL));
-    else if (sortBy === 'pos') dataToRender.sort((a,b) => String(a.POSICION).localeCompare(String(b.POSICION)));
+    else if (sortBy === 'pos') dataToRender.sort((a,b) => String(a.POSICION || '').localeCompare(String(b.POSICION || '')));
     if (dataToRender.length === 0) return '<p class="text-gray-500 text-center col-span-4 mt-10">No se encontraron jugadores...</p>';
     return dataToRender.map(p => `
         <div onclick="showView('playerProfile', '${p.JUGADOR}')" class="glass p-4 rounded-2xl text-center hover:border-blue-500/50 transition cursor-pointer flex flex-col items-center justify-center">
@@ -751,7 +811,7 @@ function renderPlayersGrid(query = '', sortBy = 'default') {
             <h3 class="font-bold text-white text-sm">${p.JUGADOR}</h3>
             <div class="mt-2 flex items-center gap-2">
                 <span class="font-black text-xl ${getOvrColor(n(p.OVERALL))}">${n(p.OVERALL)}</span>
-                <span class="text-sm font-bold text-gray-500 bg-gray-800 px-2 py-0.5 rounded">${p.POSICION}</span>
+                <span class="text-sm font-bold text-gray-500 bg-gray-800 px-2 py-0.5 rounded">${p.POSICION || '-'}</span>
             </div>
         </div>
     `).join('');
@@ -816,10 +876,10 @@ function renderAdmin() {
     else if(adminSection === 'loadMatch' || adminSection === 'editMatch') {
         const isEdit = adminSection === 'editMatch';
         if(isEdit && !adminMatch.ID_Partido) {
-            app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">✏️ Editar Partido</h1><div class="admin-card space-y-4"><select onchange="loadMatchIntoAdmin(this.value)" id="edit_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a editar...</option>${DB['PARTIDOS'].map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select></div>`;
+            app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">✏️ Editar Partido</h1><div class="admin-card space-y-4"><select onchange="loadMatchIntoAdmin(this.value)" id="edit_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a editar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select></div>`;
             return;
         }
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">${isEdit ? '✏️ Editar' : '⚽ Cargar'} Partido</h1><div class="admin-card mb-6"><div class="grid grid-cols-2 gap-4"><input type="date" id="m_fecha" class="glass p-3 rounded-xl bg-gray-900 text-white" value="${isEdit ? toInputDate(adminMatch.Fecha) : new Date().toISOString().split('T')[0]}"><select id="m_estadio" class="glass p-3 rounded-xl bg-gray-900 text-white">${estadios.map(e => `<option value="${e}" ${isEdit && adminMatch.Estadio === e ? 'selected' : ''}>${e}</option>`).join('')}</select><select id="m_temp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="1" ${isEdit && adminMatch.Temporada == '1' ? 'selected' : ''}>Temp 1</option><option value="2" ${isEdit ? (adminMatch.Temporada == '2' ? 'selected' : '') : 'selected'}>Temp 2</option></select><select id="m_mvp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="">MVP</option>${DB['HISTORICA'].map(p=>`<option ${isEdit && adminMatch.MVP === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><div class="flex gap-2 items-center"><span class="font-bold">E1:</span><input type="number" id="m_g1" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E1 : 0}"></div><div class="flex gap-2 items-center"><span class="font-bold">E2:</span><input type="number" id="m_g2" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E2 : 0}"></div></div></div><div class="admin-card mt-4"><div class="grid grid-cols-5 gap-2 mb-4"><select id="p_jugador" class="glass p-2 rounded-lg bg-gray-900 text-white col-span-2"><option value="">Jugador...</option>${DB['HISTORICA'].map(p=>`<option>${p.JUGADOR}</option>`).join('')}</select><select id="p_equipo" class="glass p-2 rounded-lg bg-gray-900 text-white"><option value="Equipo 1">Eq 1</option><option value="Equipo 2">Eq 2</option></select><input type="number" id="p_goles" placeholder="Goles" class="glass p-2 rounded-lg bg-gray-900 text-white"><input type="number" id="p_nota" placeholder="Nota" class="glass p-2 rounded-lg bg-gray-900 text-white"></div><button onclick="addPlayerToMatch()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl mb-4">+ Agregar</button><div class="space-y-2">${adminMatch.Detalle.map((p, i) => `<div class="gen-player"><span>${p.Jugador} (Eq ${p.Equipo}) - ⚽${p.Goles} ⭐${p.Nota}</span><button onclick="removePlayerFromMatch(${i})" class="text-red-500 font-bold">X</button></div>`).join('')}</div></div><button onclick="${isEdit ? 'saveEditedMatch()' : 'saveMatch()'}" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-lg mt-4">${isEdit ? 'GUARDAR CAMBIOS' : 'GUARDAR PARTIDO'}</button>`;
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">${isEdit ? '✏️ Editar' : '⚽ Cargar'} Partido</h1><div class="admin-card mb-6"><div class="grid grid-cols-2 gap-4"><input type="date" id="m_fecha" class="glass p-3 rounded-xl bg-gray-900 text-white" value="${isEdit ? toInputDate(adminMatch.Fecha) : todayInput()}"><select id="m_estadio" class="glass p-3 rounded-xl bg-gray-900 text-white">${estadios.map(e => `<option value="${e}" ${isEdit && adminMatch.Estadio === e ? 'selected' : ''}>${e}</option>`).join('')}</select><select id="m_temp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="1" ${isEdit && adminMatch.Temporada == '1' ? 'selected' : ''}>Temp 1</option><option value="2" ${isEdit ? (adminMatch.Temporada == '2' ? 'selected' : '') : 'selected'}>Temp 2</option></select><select id="m_mvp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="">MVP</option>${(DB['HISTORICA'] || []).map(p=>`<option ${isEdit && adminMatch.MVP === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><div class="flex gap-2 items-center"><span class="font-bold">E1:</span><input type="number" id="m_g1" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E1 : 0}"></div><div class="flex gap-2 items-center"><span class="font-bold">E2:</span><input type="number" id="m_g2" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E2 : 0}"></div></div></div><div class="admin-card mt-4"><div class="grid grid-cols-5 gap-2 mb-4"><select id="p_jugador" class="glass p-2 rounded-lg bg-gray-900 text-white col-span-2"><option value="">Jugador...</option>${(DB['HISTORICA'] || []).map(p=>`<option>${p.JUGADOR}</option>`).join('')}</select><select id="p_equipo" class="glass p-2 rounded-lg bg-gray-900 text-white"><option value="Equipo 1">Eq 1</option><option value="Equipo 2">Eq 2</option></select><input type="number" id="p_goles" placeholder="Goles" class="glass p-2 rounded-lg bg-gray-900 text-white"><input type="number" id="p_nota" placeholder="Nota" class="glass p-2 rounded-lg bg-gray-900 text-white"></div><button onclick="addPlayerToMatch()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl mb-4">+ Agregar</button><div class="space-y-2">${adminMatch.Detalle.map((p, i) => `<div class="gen-player"><span>${p.Jugador} (Eq ${p.Equipo}) - ⚽${p.Goles} ⭐${p.Nota}</span><button onclick="removePlayerFromMatch(${i})" class="text-red-500 font-bold">X</button></div>`).join('')}</div></div><button onclick="${isEdit ? 'saveEditedMatch()' : 'saveMatch()'}" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-lg mt-4">${isEdit ? 'GUARDAR CAMBIOS' : 'GUARDAR PARTIDO'}</button>`;
     }
     else if(adminSection === 'manageStadiums') {
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🏟️ Gestionar Estadios</h1><div class="admin-card space-y-4"><div class="space-y-2">${estadios.map(e => `<div class="gen-player"><span>${e}</span><div class="flex gap-2"><button onclick="editStadium('${e}')" class="text-blue-400">✏️</button><button onclick="deleteStadium('${e}')" class="text-red-500">❌</button></div></div>`).join('')}</div><input type="text" id="new_stadium_name" placeholder="Nombre del nuevo estadio" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="saveStadium()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">AÑADIR ESTADIO</button></div>`;
@@ -829,13 +889,13 @@ function renderAdmin() {
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📝 Editor INICIO</h1><div class="admin-card space-y-4"><textarea id="home_text_input" rows="5" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${currentText}</textarea><button onclick="saveHomeText()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR TEXTO</button></div>`;
     }
     else if(adminSection === 'updatePhoto') {
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📷 Insertar/Cambiar Foto</h1><div class="admin-card space-y-4"><select id="photo_player_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${DB['HISTORICA'].map(p => `<option value="${p.JUGADOR}">${p.JUGADOR}</option>`).join('')}</select><input type="text" id="photo_id_input" placeholder="ID de Google Drive" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="savePhoto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR FOTO (DRIVE)</button></div>`;
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📷 Insertar/Cambiar Foto</h1><div class="admin-card space-y-4"><select id="photo_player_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${(DB['HISTORICA'] || []).map(p => `<option value="${p.JUGADOR}">${p.JUGADOR}</option>`).join('')}</select><input type="text" id="photo_id_input" placeholder="ID de Google Drive" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="savePhoto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR FOTO (DRIVE)</button></div>`;
     }
     else if(adminSection === 'addPlayer') {
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">👤 Añadir Nuevo Jugador</h1><div class="admin-card space-y-4"><input type="text" id="new_player_name" placeholder="Nombre y Apellido" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><input type="text" id="new_player_pos" placeholder="Posición (Ej: DC, CM, GK)" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="saveNewPlayer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">CREAR JUGADOR</button></div>`;
     }
     else if(adminSection === 'deleteMatch') {
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🗑️ Eliminar Partido</h1><div class="admin-card space-y-4"><select id="del_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${DB['PARTIDOS'].map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select><button onclick="deleteMatch()" class="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl">ELIMINAR PARTIDO SELECCIONADO</button></div>`;
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🗑️ Eliminar Partido</h1><div class="admin-card space-y-4"><select id="del_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a borrar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select><button onclick="deleteMatch()" class="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl">ELIMINAR PARTIDO SELECCIONADO</button></div>`;
     }
 }
 
@@ -859,8 +919,9 @@ function showAlert(title, message, type = 'success') {
 }
 
 function loadMatchIntoAdmin(id) {
-    const m = DB['PARTIDOS'].find(m => m.ID_Partido == id);
-    const dets = DB['DETALLE_PARTIDO'].filter(d => d.ID_Partido == id);
+    const m = (DB['PARTIDOS'] || []).find(m => m.ID_Partido == id);
+    if(!m) return showAlert('Error', 'No se encontró ese partido.', 'error');
+    const dets = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == id);
     adminMatch = {
         ID_Partido: m.ID_Partido, Fecha: m.Fecha, Temporada: m.Temporada, Goles_E1: m.Goles_E1, Goles_E2: m.Goles_E2, MVP: m.MVP, Estadio: m.Estadio || 'St. Diego',
         Detalle: dets.map(d => ({ Jugador: d.Jugador, Equipo: d.Equipo, Goles: d.Goles, Nota: d.Nota }))
@@ -869,10 +930,11 @@ function loadMatchIntoAdmin(id) {
 }
 
 async function saveNewPlayer() { 
-    const n = document.getElementById('new_player_name').value, p = document.getElementById('new_player_pos').value; 
-    if(!n||!p) return showAlert('Faltan datos', 'Por favor, completá nombre y posición.', 'error'); 
+    const nombre = document.getElementById('new_player_name').value.trim(); 
+    const pos = document.getElementById('new_player_pos').value.trim().toUpperCase(); 
+    if(!nombre || !pos) return showAlert('Faltan datos', 'Por favor, completá nombre y posición.', 'error'); 
     try { 
-        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: n, Posicion: p, FotoId: '', Password: adminPassword }) }); 
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addPlayer', Nombre: nombre, Posicion: pos, FotoId: '', Password: adminPassword }) }); 
         const data = await res.json(); 
         if(data.status === 'success') { 
             showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); 
@@ -885,14 +947,17 @@ async function saveNewPlayer() {
         showAlert('Error', 'No se pudo conectar.', 'error'); 
     } 
 }
+
 async function deleteMatch() { 
     const id = document.getElementById('del_match_select').value; 
+    if(!id) return showAlert('Faltan datos', 'Elegí un partido de la lista.', 'error');
     if(!confirm("¿Seguro que querés borrar este partido? Esta acción no se puede deshacer.")) return; 
     try { 
         await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMatch', MatchId: id, Password: adminPassword }) }); 
         showAlert('Partido Eliminado', 'El partido fue borrado correctamente.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
+
 async function savePhoto() { 
     const n = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; 
     if(!id) return showAlert('Faltan datos', 'Tenés que pegar un ID de Drive.', 'error'); 
@@ -1050,12 +1115,12 @@ function updateCardPreview() {
     const cardType = getCardType(ovr);
     const templateNames = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' };
     const templateName = templateNames[cardType];
-    const cardBg = photosMap[templateName] || "https://via.placeholder.com/300x420?text=Falta+ID+de+" + templateName;
-    const photo = cardGenData.photo || "https://via.placeholder.com/150";
+    const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID ' + templateName);
+    const photo = cardGenData.photo || svgPlaceholder(150, 150, cardGenData.name ? String(cardGenData.name).charAt(0) : '?');
     const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
     document.getElementById('card_preview').innerHTML = `
         <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="this.src='https://via.placeholder.com/300x420?text=Error+al+cargar+ID'">
+            <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')"
             <div style="position: absolute; top: 65px; left: 67px; text-align: center; color: ${txtColor};">
                 <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
                 <p style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">${cardGenData.pos}</p>
@@ -1108,26 +1173,6 @@ async function checkAdmin() {
     document.body.appendChild(modal);
     document.getElementById('admin-pass-input').focus();
     document.getElementById('admin-pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAdminPass(); });
-}
-
-function updateAuthButtons() {
-    const btnPc = document.getElementById('auth-btn-pc');
-    const btnMobile = document.getElementById('auth-btn-mobile');
-    
-    [btnPc, btnMobile].forEach(btn => {
-        if(!btn) return;
-        if(currentUser) {
-            btn.innerText = "Cerrar Sesión";
-            btn.setAttribute('onclick', 'openLogoutModal()');
-            btn.classList.remove('text-green-400', 'hover:text-green-300');
-            btn.classList.add('text-red-400', 'hover:text-red-300');
-        } else {
-            btn.innerText = "Ingresar";
-            btn.setAttribute('onclick', 'openLoginModal()');
-            btn.classList.remove('text-red-400', 'hover:text-red-300');
-            btn.classList.add('text-green-400', 'hover:text-green-300');
-        }
-    });
 }
 
 function openLoginModal() {
@@ -1199,9 +1244,7 @@ function submitLogout() {
     showView('home');
 }
 
-
 function openVoteModal(matchId) {
-    const match = DB['PARTIDOS'].find(m => m.ID_Partido == matchId);
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
 
     const modal = document.createElement('div');
@@ -1216,7 +1259,7 @@ function openVoteModal(matchId) {
             <div class="mb-4 text-left">
                 <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido</label>
                 <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-white/10">
-                    ${details.map(d => `<option value="${d.Jugador}" ${d.Jugador === currentUser ? 'disabled' : ''}>${d.Jugador} (Eq ${d.Equipo}) ${d.Jugador === currentUser ? '(Vos)' : ''}</option>`).join('')}
+                    ${details.filter(d => d.Jugador !== currentUser).map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
                 </select>
             </div>
 
@@ -1269,7 +1312,6 @@ async function submitVote(matchId) {
 
     if (!valid) return showAlert('Error de Notas', errorMsg, 'error');
 
-    // Desactivar el botón para evitar dobles clics
     const submitBtn = document.querySelector('#vote-modal button.bg-yellow-600');
     if(submitBtn) {
         submitBtn.innerText = 'Enviando...';
@@ -1286,7 +1328,6 @@ async function submitVote(matchId) {
         document.getElementById('vote-modal').remove();
         
         if(data.status === 'success') {
-            // ACTUALIZACIÓN INSTANTÁNEA (Sin esperar a Google)
             if (!DB['VOTACIONES']) DB['VOTACIONES'] = [];
             DB['VOTACIONES'].push({
                 ID_Partido: matchId,
@@ -1294,18 +1335,17 @@ async function submitVote(matchId) {
                 MVP: mvp,
                 Notas: JSON.stringify(notas)
             });
-            localStorage.setItem('tecSportsDB', JSON.stringify(DB)); // Guardamos en la caché del celular
-            
+            localStorage.setItem('tecSportsDB', JSON.stringify(DB));
             showAlert('¡Voto Enviado!', 'Tu voto fue registrado correctamente.');
-            showView('home'); // Recarga el inicio instantáneamente con el botón oculto
+            showView('home');
         } else {
-            // Si el Excel dice "Ya votaste", mostramos este mensaje
             showAlert('Atención', data.message || 'No se pudo registrar.', 'error');
             showView('home');
         }
         
     } catch(e) { 
-        showAlert('Error', 'No se pudo conectar.', 'error'); 
+        showAlert('Error de conexión', 'Tu voto NO se envió. Tus notas siguen cargadas, probá de nuevo.', 'error'); 
+        if(submitBtn) { submitBtn.innerText = 'Enviar Voto'; submitBtn.disabled = false; }
     }
 }
 
@@ -1381,28 +1421,25 @@ function getRouteFromUrl() {
     return { view: 'home', param: null };
 }
 window.addEventListener('popstate', (e) => {
-    if (e.state && e.state.view) {
-        showView(e.state.view, e.state.param);
-    } else {
-        showView('home');
+    window.isRouting = true; // FIX: re-render SIN pushState (mata el bucle del botón Atrás)
+    try {
+        if (e.state && e.state.view) showView(e.state.view, e.state.param);
+        else showView('home');
+    } finally {
+        window.isRouting = false;
     }
 });
+
 async function initApp() {
-    await loadData();
-    let search = window.location.search;
+    BASE_URL = getBasePath(); // FIX: calcular ANTES del primer render
+    const search = window.location.search;
     if (search.startsWith('?/')) {
-        let route = search.substring(2).split('&')[0];
-        let parts = route.split('/');
-        let view = parts[0] || 'home';
-        let param = parts[1] ? decodeURIComponent(parts[1]) : null;
-        BASE_URL = getBasePath();
-        let cleanUrl = BASE_URL + view + (param ? '/' + encodeURIComponent(param) : '');
+        const parts = search.substring(2).split('&')[0].split('/');
+        const view = parts[0] || 'home';
+        const param = parts[1] ? decodeURIComponent(parts[1]) : null;
+        const cleanUrl = BASE_URL + view + (param ? '/' + encodeURIComponent(param) : '');
         window.history.replaceState({}, '', cleanUrl);
-        showView(view, param);
-    } else {
-        BASE_URL = getBasePath();
-        const initialRoute = getRouteFromUrl();
-        showView(initialRoute.view, initialRoute.param);
     }
+    await loadData();
 }
 initApp();
