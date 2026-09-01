@@ -2,7 +2,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_
 let DB = {}; let photosMap = {};
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
-let adminSection = 'menu'; let adminPassword = null;
+let adminSection = 'menu';
+let adminVotePreview = null;
+let adminPassword = null;
 let adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] };
 let teamGenPlayers = [];
 let cardGenData = { name: '', ovr: 75, pos: 'DC', stats: { rit: 75, tir: 75, pas: 75, reg: 75, def: 75, fis: 75 }, photo: '' };
@@ -40,6 +42,8 @@ function svgPlaceholder(w, h, text) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#1f2937"/><text x="50%" y="50%" fill="#6b7280" font-family="Arial" font-size="${Math.round(h/12)}" font-weight="bold" text-anchor="middle" dy=".35em">${text || ''}</text></svg>`;
     return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
+const cleanVal = (v) => { const s = String(v == null ? '' : v).trim(); return (s === '' || s === '*') ? '' : s; };
+function isBlank(v) { return cleanVal(v) === ''; }
 function fixBrokenImg(el, w, h, text) { el.onerror = null; el.src = svgPlaceholder(w, h, text); }
 
 function updateCardPreview() {
@@ -52,25 +56,29 @@ function updateCardPreview() {
     const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
     document.getElementById('card_preview').innerHTML = `
         <div style="width: 300px; height: 420px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
-            <div style="position: absolute; top: 65px; left: 67px; text-align: center; color: ${txtColor};">
-                <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
-                <p style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">${cardGenData.pos}</p>
-            </div>
-            <div style="position: absolute; top: 87px; left: 51%; transform: translateX(-50%); width: 110px; height: 125px;">
-                <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-            <p style="position: absolute; top: 225px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
-            <div style="position: absolute; bottom: 71px; width: 100%; display: flex; justify-content: center; gap: 50px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
+            <img src="${cardBg}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
+            <div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 55px 24px 24px;">
+                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 18px;">
+                    <div style="text-align: center; color: ${txtColor};">
+                        <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif; margin: 0;">${ovr}</p>
+                        <p style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0;">${cardGenData.pos}</p>
+                    </div>
+                    <div style="width: 110px; height: 125px; overflow: hidden;">
+                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
+                    </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
-                    <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
+                <p style="margin: 12px 0 0 0; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
+                <div style="margin-top: auto; display: flex; gap: 45px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">TIR</span><span>${cardGenData.stats.tir}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">PAS</span><span>${cardGenData.stats.pas}</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">REG</span><span>${cardGenData.stats.reg}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">DEF</span><span>${cardGenData.stats.def}</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">FIS</span><span>${cardGenData.stats.fis}</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -189,6 +197,30 @@ function calculateRecords() {
         }
     }
     return records;
+}
+
+function getLastSeason() {
+    const matches = DB['PARTIDOS'] || [];
+    if (matches.length === 0) return null;
+    return String(matches[matches.length - 1].Temporada);
+}
+
+function computeStandings(season) {
+    const details = DB['DETALLE_PARTIDO'] || [];
+    const table = {};
+    details.forEach(d => {
+        if (season && String(d.Temporada) !== String(season)) return;
+        const j = String(d.Jugador).trim();
+        if (!table[j]) table[j] = { JUGADOR: j, PJ: 0, PG: 0, PE: 0, PP: 0, GOLES: 0, PTS: 0 };
+        const t = table[j];
+        t.PJ++;
+        const res = String(d.Resultado || '').toLowerCase();
+        if (res.includes('gan')) { t.PG++; t.PTS += 3; }
+        else if (res.includes('emp')) { t.PE++; t.PTS += 1; }
+        else if (res.includes('per')) t.PP++;
+        t.GOLES += n(d.Goles);
+    });
+    return Object.values(table).sort((a, b) => b.PTS - a.PTS || b.GOLES - a.GOLES || a.JUGADOR.localeCompare(b.JUGADOR));
 }
 
 function getTeammatesAndRivals(playerName) {
@@ -323,7 +355,8 @@ function showView(view, param = null) {
     if(document.querySelector(`a[onclick="showView('${view}')"]`)) document.querySelector(`a[onclick="showView('${view}')"]`).classList.add('active');
     
     if(view === 'home') {
-        const inicioData = DB['INICIO'] || [];
+        const standings = computeStandings(getLastSeason());
+        const homeSeasonLabel = getLastSeason() ? ' — Temporada ' + getLastSeason() : ' (Histórica)';
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
         const esquinaBg = photosMap['ESQUINA'] || svgPlaceholder(1920, 1080, 'TecSports');
@@ -331,8 +364,9 @@ function showView(view, param = null) {
         // LÓGICA DE VOTACIÓN
         // LÓGICA DE VOTACIÓN RESTRINGIDA
         const votes = DB['VOTACIONES'] || [];
+        const mvpName = cleanVal(lastMatch?.MVP); // FIX: el Excel usa '*' como vacío
         const alreadyVoted = votes.some(v => v.ID_Partido == lastMatch?.ID_Partido && v.Votador == currentUser);
-        const votingOpen = lastMatch && (!lastMatch.MVP || lastMatch.MVP === '');
+        const votingOpen = lastMatch && !mvpName;
         
         let voteBanner = '';
         if(votingOpen) {
@@ -381,9 +415,9 @@ function showView(view, param = null) {
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-center mt-1 md:mt-2">
-                                    <img src="${getPhoto(lastMatch.MVP)}" class="w-14 h-14 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover mb-1 shadow-lg shadow-yellow-500/20">
+                                    <img src="${getPhoto(mvpName)}"-20 rounded-full border-4 border-yellow-400 object-cover mb-1 shadow-lg shadow-yellow-500/20">
                                     <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
-                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${lastMatch.MVP || 'Pendiente'}</p>
+                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${mvpName || 'Pendiente'}
                                 </div>
                             </div>
                             <div class="flex flex-col items-center">
@@ -399,7 +433,7 @@ function showView(view, param = null) {
             `;
         }
 
-        const topScorers = inicioData.slice().sort((a,b) => n(b.GOLES||b.Goles) - n(a.GOLES||a.Goles)).slice(0, 10);
+                const topScorers = standings.filter(p => p.PJ > 0).slice().sort((a,b) => b.GOLES - a.GOLES).slice(0, 10);
 
         app.innerHTML = `
             <div class="flex flex-col gap-8">
@@ -410,7 +444,7 @@ function showView(view, param = null) {
                         <div class="flex-grow">${matchCardHTML}</div>
                     </div>
                     <div class="lg:col-span-1 flex flex-col">
-                        <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Goleadores (Top 10)</h2>
+                        <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Goleadores (Top 10)${homeSeasonLabel}</h2>
                         <div class="glass rounded-2xl overflow-hidden border border-white/10 glow-blue flex-grow">
                             <table class="w-full text-sm">
                                 <thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10">
@@ -444,14 +478,14 @@ function showView(view, param = null) {
                     </div>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones</h2>
+                    <h2 class="text-2xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Tabla de Posiciones${homeSeasonLabel}</h2>
                     <div class="glass rounded-2xl overflow-hidden border border-white/10">
                         <table class="w-full text-sm">
                             <thead class="bg-white/5 text-gray-500 uppercase text-xs border-b border-white/10">
                                 <tr><th class="p-3 text-left">Jugador</th><th class="p-3 text-center">PJ</th><th class="p-3 text-center">PG</th><th class="p-3 text-center">PE</th><th class="p-3 text-center">PP</th><th class="p-3 text-center">Goles</th><th class="p-3 text-center text-blue-400">PTS</th></tr>
                             </thead>
                             <tbody>
-                                ${inicioData.map((j, i) => {
+                                ${standings.map((j, i) => {
                                     const nombre = j.JUGADOR || Object.values(j)[0];
                                     const pj = n(j.PJ || j['PARTIDOS']); const pg = n(j.PG || j['VICTORIAS']); const pe = n(j.PE || j['EMPATES']); const pp = n(j.PP || j['DERROTAS']);
                                     const goles = n(j.GOLES || j['Goles']); const pts = n(j.PTS || j['Puntos']);
@@ -502,7 +536,7 @@ function showView(view, param = null) {
                     <div class="bg-black px-4 md:px-8 py-2 md:py-4 rounded-xl mx-2 md:mx-4 neon-glow border border-white/10"><span class="text-4xl md:text-6xl font-black text-blue-400">${match.Goles_E1}</span><span class="text-2xl md:text-4xl font-bold text-gray-600 mx-1 md:mx-2">-</span><span class="text-4xl md:text-6xl font-black text-white">${match.Goles_E2}</span></div>
                     <div class="text-center flex-1"><p class="text-2xl md:text-4xl font-black text-red-400">EQUIPO 2</p></div>
                 </div>
-                <div class="mt-4 flex items-center justify-center space-x-2 text-yellow-400"><span class="text-xl">🎩</span><p class="font-bold text-lg">MVP: ${match.MVP || 'Pendiente'}</p>
+                <div class="mt-4 flex items-center justify-center space-x-2 text-yellow-400"><span class="text-xl">🎩</span><p class="font-bold text-lg">MVP: ${cleanVal(match.MVP) || 'Pendiente'}</p>
             </div>
             <div class="pitch rounded-3xl p-4 relative w-full aspect-[16/9] mb-8 overflow-hidden">
                 <div class="pitch-line-center"></div><div class="pitch-circle-center"></div><div class="pitch-box-left"></div><div class="pitch-box-right"></div><div class="pitch-goal-left"></div><div class="pitch-goal-right"></div>
@@ -871,7 +905,7 @@ function renderAdmin() {
     (DB['PARTIDOS'] || []).forEach(m => { if(m.Estadio && !estadios.includes(m.Estadio)) estadios.push(m.Estadio); });
     if(estadios.length === 0) estadios = ['St. Diego'];
     if(adminSection === 'menu') {
-        app.innerHTML = `<h1 class="text-4xl font-black text-white mb-2">Panel de <span class="text-blue-400">Administración</span></h1><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div onclick="setAdminSection('loadMatch')" class="admin-card"><h3 class="text-blue-400">⚽ Cargar Partido</h3></div><div onclick="setAdminSection('editMatch')" class="admin-card"><h3 class="text-blue-400">✏️ Editar Partido</h3></div><div onclick="setAdminSection('addPlayer')" class="admin-card"><h3 class="text-blue-400">👤 Añadir Jugador</h3></div><div onclick="setAdminSection('deleteMatch')" class="admin-card"><h3 class="text-red-400">🗑️ Eliminar Partido</h3></div><div onclick="setAdminSection('updatePhoto')" class="admin-card"><h3 class="text-blue-400">📷 Gestionar Fotos</h3></div><div onclick="setAdminSection('manageStadiums')" class="admin-card"><h3 class="text-blue-400">🏟️ Gestionar Estadios</h3></div><div onclick="setAdminSection('editHome')" class="admin-card"><h3 class="text-blue-400">📝 Editor INICIO</h3></div></div>`;
+        app.innerHTML = `<h1 class="text-4xl font-black text-white mb-2">Panel de <span class="text-blue-400">Administración</span></h1><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div onclick="setAdminSection('loadMatch')" class="admin-card"><h3 class="text-blue-400">⚽ Cargar Partido</h3></div><div onclick="setAdminSection('editMatch')" class="admin-card"><h3 class="text-blue-400">✏️ Editar Partido</h3></div><div onclick="setAdminSection('addPlayer')" class="admin-card"><h3 class="text-blue-400">👤 Añadir Jugador</h3></div><div onclick="setAdminSection('deleteMatch')" class="admin-card"><h3 class="text-red-400">🗑️ Eliminar Partido</h3></div><div onclick="setAdminSection('updatePhoto')" class="admin-card"><h3 class="text-blue-400">📷 Gestionar Fotos</h3></div><div onclick="setAdminSection('manageStadiums')" class="admin-card"><h3 class="text-blue-400">🏟️ Gestionar Estadios</h3></div><div onclick="setAdminSection('voting')" class="admin-card"><h3 class="text-yellow-400">🗳️ Votaciones</h3></div><div onclick="setAdminSection('editHome')" class="admin-card"><h3 class="text-blue-400">📝 Editor INICIO</h3></div></div>`;
     } 
     else if(adminSection === 'loadMatch' || adminSection === 'editMatch') {
         const isEdit = adminSection === 'editMatch';
@@ -888,6 +922,51 @@ function renderAdmin() {
         const currentText = DB['CONFIG'] && DB['CONFIG'].home_text ? DB['CONFIG'].home_text : '';
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📝 Editor INICIO</h1><div class="admin-card space-y-4"><textarea id="home_text_input" rows="5" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${currentText}</textarea><button onclick="saveHomeText()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR TEXTO</button></div>`;
     }
+    
+        else if(adminSection === 'voting') {
+        const matches = (DB['PARTIDOS'] || []).slice().reverse();
+        const votes = DB['VOTACIONES'] || [];
+        const abiertos = matches.filter(m => isBlank(m.MVP));
+        const cerrados = matches.filter(m => !isBlank(m.MVP));
+        const voteCount = (id) => votes.filter(v => v.ID_Partido == id).length;
+        let previewBox = '';
+        if (adminVotePreview) {
+            const notesRows = Object.entries(adminVotePreview.notes || {}).sort((a, b) => b[1] - a[1])
+                .map(([jug, nota]) => `<div class="gen-player"><span>${jug}</span><span class="font-black text-yellow-400">⭐ ${nota}</span></div>`).join('');
+            previewBox = `
+            <div class="admin-card mb-8">
+                <h3 class="text-lg font-bold text-yellow-400 mb-3">📊 Parciales — MVP provisorio: ${adminVotePreview.mvp || 'Sin votos de MVP aún'}</h3>
+                <div class="space-y-2">${notesRows || '<p class="text-gray-500 text-sm">Todavía no hay notas cargadas.</p>'}</div>
+            </div>`;
+        }
+        app.innerHTML = `
+            <button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button>
+            <h1 class="text-3xl font-black text-white mb-6">🗳️ Gestión de Votaciones</h1>
+            ${previewBox}
+            <h3 class="text-xl font-black mb-3 text-green-400 border-l-4 border-green-500 pl-3">Votaciones Abiertas (${abiertos.length})</h3>
+            <div class="space-y-3 mb-8">
+                ${abiertos.length === 0 ? '<p class="text-gray-500">No hay votaciones abiertas.</p>' : abiertos.map(m => `
+                <div class="admin-card flex flex-col md:flex-row justify-between md:items-center gap-3">
+                    <div><p class="font-bold text-white">${formatDate(m.Fecha)} — E1 ${m.Goles_E1} vs ${m.Goles_E2} E2</p><p class="text-xs text-gray-500">🗳️ ${voteCount(m.ID_Partido)} voto(s) registrados | 🏟️ ${m.Estadio || 'St. Diego'}</p></div>
+                    <div class="flex gap-2">
+                        <button onclick="previewVotesAdmin('${m.ID_Partido}')" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl text-sm">📊 Parciales</button>
+                        <button onclick="closeVoting('${m.ID_Partido}')" class="bg-green-600 hover:bg-green-500 text-white font-black py-2 px-4 rounded-xl text-sm">✅ CERRAR</button>
+                    </div>
+                </div>`).join('')}
+            </div>
+            <h3 class="text-xl font-black mb-3 text-red-400 border-l-4 border-red-500 pl-3">Votaciones Cerradas (${cerrados.length})</h3>
+            <div class="space-y-3">
+                ${cerrados.length === 0 ? '<p class="text-gray-500">No hay votaciones cerradas.</p>' : cerrados.map(m => `
+                <div class="admin-card flex flex-col md:flex-row justify-between md:items-center gap-3">
+                    <div><p class="font-bold text-white">${formatDate(m.Fecha)} — E1 ${m.Goles_E1} vs ${m.Goles_E2} E2</p><p class="text-xs text-yellow-400">🎩 MVP: ${cleanVal(m.MVP) || 'Sin definir'}</p></div>
+                    <div class="flex gap-2">
+                        <button onclick="reopenVotingAdmin('${m.ID_Partido}')" class="bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-xl text-sm">🔓 Reabrir</button>
+                    </div>
+                </div>`).join('')}
+            </div>
+        `;
+    }
+
     else if(adminSection === 'updatePhoto') {
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📷 Insertar/Cambiar Foto</h1><div class="admin-card space-y-4"><select id="photo_player_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${(DB['HISTORICA'] || []).map(p => `<option value="${p.JUGADOR}">${p.JUGADOR}</option>`).join('')}</select><input type="text" id="photo_id_input" placeholder="ID de Google Drive" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="savePhoto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR FOTO (DRIVE)</button></div>`;
     }
@@ -899,7 +978,7 @@ function renderAdmin() {
     }
 }
 
-function setAdminSection(section) { adminSection = section; adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; renderAdmin(); }
+function setAdminSection(section) { adminSection = section; adminVotePreview = null; adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] }; renderAdmin(); }
 
 function showAlert(title, message, type = 'success') {
     const icon = type === 'success' ? '✅' : '⚠️';
@@ -1366,6 +1445,52 @@ async function submitAdminPass() {
     } catch(e) { 
         alert("Error de conexión."); 
     } 
+}
+
+async function previewVotesAdmin(matchId) {
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'previewVotes', MatchID: matchId }) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            adminVotePreview = data;
+            adminVotePreview.matchId = matchId;
+            renderAdmin();
+        } else {
+            showAlert('Sin datos', data.message || 'Todavía no hay votos.', 'error');
+        }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
+}
+
+async function closeVoting(matchId) {
+    if(!confirm('¿Cerrar la votación? Se calculará el MVP y las notas finales de este partido.')) return;
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'processVotes', MatchID: matchId, Password: adminPassword }) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            adminVotePreview = null;
+            showAlert('Votación Cerrada', data.mvp ? 'MVP final: ' + data.mvp : 'Cerrada, pero nadie había votado MVP.');
+            await loadData();
+            setAdminSection('voting');
+        } else {
+            showAlert('Error', data.message || 'No se pudo cerrar.', 'error');
+        }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
+}
+
+async function reopenVotingAdmin(matchId) {
+    if(!confirm('¿Reabrir la votación? Solo podrán votar los que todavía no votaron.')) return;
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'reopenVoting', MatchID: matchId, Password: adminPassword }) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            adminVotePreview = null;
+            showAlert('Votación Reabierta', 'Los que faltaban ya pueden votar.');
+            await loadData();
+            setAdminSection('voting');
+        } else {
+            showAlert('Error', data.message || 'No se pudo reabrir.', 'error');
+        }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
 }
 
 function renderDuel() {
