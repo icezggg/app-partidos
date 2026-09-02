@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tecsports-v2'; // Subí la versión si querés forzar limpieza de cache
+const CACHE_NAME = 'tecsports-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,7 +10,6 @@ const APP_SHELL = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Oswald:wght@500;700&display=swap'
 ];
 
-// INSTALACIÓN: tolerante a fallos individuales
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
@@ -20,7 +19,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// ACTIVACIÓN: borra caches viejos y toma control ya
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
@@ -29,17 +27,21 @@ self.addEventListener('activate', event => {
   );
 });
 
+const FALLBACK_HTML = new Response('<h1 style="color:#999;font-family:sans-serif;text-align:center;margin-top:40vh">Sin conexión — TecSports</h1>', { headers: { 'Content-Type': 'text/html' } });
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 1) API de datos: SIEMPRE red, nunca cache
+  // API de datos: SIEMPRE red (nunca cache)
   if (url.origin === 'https://script.google.com') {
-    event.respondWith(fetch(req));
+    event.respondWith(
+      fetch(req).catch(() => new Response('{"error":"offline"}', { headers: { 'Content-Type': 'application/json' } }))
+    );
     return;
   }
 
-  // 2) HTML: red primero (actualizaciones llegan ya), cache como respaldo offline
+  // HTML: red primero, caché como respaldo
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
@@ -48,21 +50,27 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(c => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+        .catch(() =>
+          caches.match(req)
+            .then(r => r || caches.match('./index.html'))
+            .then(r => r || FALLBACK_HTML)
+        )
     );
     return;
   }
 
-  // 3) Todo lo demás (CSS, JS, fuentes, fotos de Drive): cache + actualizar en background
+  // Resto (CSS, JS, imágenes): caché primero + actualizar en background
   event.respondWith(
     caches.match(req).then(cached => {
-      const network = fetch(req).then(res => {
-        if (res && (res.ok || res.type === 'opaque')) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => cached);
+      const network = fetch(req)
+        .then(res => {
+          if (res && (res.ok || res.type === 'opaque')) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => cached || new Response('', { status: 504, statusText: 'Offline' }));
       return cached || network;
     })
   );
