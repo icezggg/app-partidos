@@ -3,6 +3,8 @@ let DB = {}; let photosMap = {};
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
 let adminSection = 'menu';
+let profileMap = {}; let clubesList = []; let paisesList = [];
+let adminSelectedPlayer = null;
 let adminVotePreview = null;
 let adminPassword = null;
 let adminMatch = { Fecha: '', Temporada: '2', Goles_E1: 0, Goles_E2: 0, MVP: '', Estadio: 'St. Diego', Detalle: [] };
@@ -15,21 +17,25 @@ let currentUser = localStorage.getItem('tecsports_user') || null;
 function updateAuthButtons() {
     const btnPc = document.getElementById('auth-btn-pc');
     const btnMobile = document.getElementById('auth-btn-mobile');
-    
-    [btnPc, btnMobile].forEach(btn => {
-        if(!btn) return;
-        if(currentUser) {
-            btn.innerText = "Cerrar Sesión";
-            btn.setAttribute('onclick', 'openLogoutModal()');
-            btn.classList.remove('text-green-400', 'hover:text-green-300');
-            btn.classList.add('text-red-400', 'hover:text-red-300');
-        } else {
-            btn.innerText = "Ingresar";
-            btn.setAttribute('onclick', 'openLoginModal()');
-            btn.classList.remove('text-red-400', 'hover:text-red-300');
-            btn.classList.add('text-green-400', 'hover:text-green-300');
-        }
-    });
+    const areaPc = document.getElementById('user-area-pc');
+    const areaMobile = document.getElementById('user-area-mobile');
+    const namePc = document.getElementById('user-name-pc');
+    const nameMobile = document.getElementById('user-name-mobile');
+    const set = (el, show) => { if (el) el.classList.toggle('hidden', !show); };
+    if (currentUser) {
+        set(btnPc, false); set(btnMobile, false);
+        set(areaPc, true); set(areaMobile, true);
+        if (namePc) namePc.textContent = currentUser + ' ▾';
+        if (nameMobile) nameMobile.textContent = currentUser + ' ▾';
+    } else {
+        set(btnPc, true); set(btnMobile, true);
+        set(areaPc, false); set(areaMobile, false);
+    }
+}
+
+function toggleUserDropdownMobile() {
+    const dd = document.getElementById('user-dropdown-mobile');
+    if (dd) dd.classList.toggle('hidden');
 }
 
 const n = (val) => {
@@ -48,6 +54,24 @@ function fixBrokenImg(el, w, h, text) { el.onerror = null; el.src = svgPlacehold
 
 
 const getPhoto = (name) => photosMap[name] || svgPlaceholder(150, 150, name ? String(name).charAt(0).toUpperCase() : '?');
+
+function getFifaStatsFor(p, playerName) {
+    const m = profileMap[playerName];
+    if (m && (m.rit > 0 || m.tir > 0 || m.pas > 0 || m.reg > 0 || m.def > 0 || m.fis > 0)) {
+        return [m.rit || 50, m.tir || 50, m.pas || 50, m.reg || 50, m.def || 50, m.fis || 50];
+    }
+    return generateFifaStats(p); // fallback: cálculo automático
+}
+function getClubUrl(clubName) {
+    if (!clubName) return '';
+    const c = clubesList.find(c => String(c.CLUB).trim() === String(clubName).trim());
+    return c ? c.URL : '';
+}
+function getFlagUrl(paisName) {
+    if (!paisName) return '';
+    const p = paisesList.find(p => String(p.PAIS).trim() === String(paisName).trim());
+    return p ? p.URL : '';
+}
 
 const toInputDate = (dateStr) => {
     if (!dateStr) return '';
@@ -103,6 +127,20 @@ const getPitchX = (posStr, team) => {
     else if(pos.includes('W') || pos.includes('LW') || pos.includes('RW')) x = team === 1 ? 38 : 62; // Extremos un poco más atrás
     else if(pos.includes('DC')) x = team === 1 ? 44 : 56; // Delanteros separados del centro para que no se pisen con el otro equipo
     return x;
+};
+
+function processProfile(dbData) {
+    profileMap = {};
+    (dbData['PERFIL'] || []).forEach(r => {
+        const name = String(r.JUGADOR || '').trim();
+        if (!name) return;
+        profileMap[name] = {
+            rit: n(r.RIT), tir: n(r.TIR), pas: n(r.PAS), reg: n(r.REG), def: n(r.DEF), fis: n(r.FIS),
+            club: String(r.CLUB || '').trim(), pais: String(r.PAIS || '').trim(), color: String(r.COLOR_MVP || '').trim()
+        };
+    });
+    clubesList = (dbData['CLUBES'] || []);
+    paisesList = (dbData['PAISES'] || []);
 };
 
 function getCardType(ovr) { if(ovr >= 94) return 'toty'; if(ovr >= 75) return 'gold'; if(ovr >= 68) return 'silver'; return 'bronze'; }
@@ -305,6 +343,7 @@ function processPhotos(dbData) {
         });
     }
     updateAuthButtons();
+    processProfile(dbData);
 }
 
 function showView(view, param = null) {
@@ -322,6 +361,9 @@ function showView(view, param = null) {
         const lastMatch = DB['PARTIDOS'] && DB['PARTIDOS'].length > 0 ? DB['PARTIDOS'][DB['PARTIDOS'].length - 1] : null;
         const records = calculateRecords();
         const esquinaBg = photosMap['ESQUINA'] || svgPlaceholder(1920, 1080, 'TecSports');
+        const homeText = cleanVal(DB['CONFIG'] && DB['CONFIG'].home_text);
+        const myMvpColor = currentUser && profileMap[currentUser] && /^#[0-9a-fA-F]{6}$/.test(profileMap[currentUser].color || '') ? profileMap[currentUser].color : null;
+        const mvpCol = myMvpColor || '#fbbf24';  
 
         // LÓGICA DE VOTACIÓN + BARRA DE PROGRESO
         const votes = DB['VOTACIONES'] || [];
@@ -400,7 +442,7 @@ function showView(view, param = null) {
             const scorers2 = formatScorers(e2);
 
             matchCardHTML = `
-                <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full">
+                <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full" ${myMvpColor ? `style="border-color: ${myMvpColor}; box-shadow: 0 0 25px ${myMvpColor}66;"` : ''}>
                     <div class="last-match-bg" style="background-image: url('${esquinaBg}')"></div>
                     <div class="last-match-content py-4">
                         <div class="flex justify-end items-center mb-2">
@@ -420,9 +462,9 @@ function showView(view, param = null) {
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-center mt-1 md:mt-2">
-                                    <img src="${getPhoto(mvpName)}"-20 rounded-full border-4 border-yellow-400 object-cover mb-1 shadow-lg shadow-yellow-500/20">
-                                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 mb-1">MVP del Partido</span>
-                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${mvpName || 'Pendiente'}
+                                    <img src="${getPhoto(mvpName)}" class="w-20 h-20 md:w-28 md:h-28 rounded-full border-4 object-cover mb-1 shadow-lg" style="border-color: ${mvpCol}; box-shadow: 0 4px 20px ${mvpCol}66;">
+                                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1" style="color: ${mvpCol};">MVP del Partido</span>
+                                    <p class="text-xs md:text-sm font-bold text-white">🎩 ${mvpName || 'Pendiente'}</p>
                                 </div>
                             </div>
                             <div class="flex flex-col items-center">
@@ -443,6 +485,7 @@ function showView(view, param = null) {
         app.innerHTML = `
             <div class="flex flex-col gap-8">
                 ${voteBanner}
+                ${homeText ? `<div class="glass rounded-2xl border border-white/10 p-4"><p class="text-gray-300 text-sm whitespace-pre-line">${homeText}</p></div>` : ''}
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 flex flex-col">
                         <h2 class="text-xl font-display uppercase tracking-wide text-gray-300 mb-4 border-l-4 border-blue-800 pl-3">Último Partido</h2>
@@ -508,9 +551,25 @@ function showView(view, param = null) {
     else if(view === 'matchDetail') {
         const match = (DB['PARTIDOS'] || []).find(m => m.ID_Partido == param);
         if(!match) return showView('home'); // FIX: partido inexistente → home
+                // Color MVP personalizado: solo si este partido es el ÚLTIMO cargado
+        const allMatches = DB['PARTIDOS'] || [];
+        const lastMatchId = allMatches.length > 0 ? String(allMatches[allMatches.length - 1].ID_Partido) : null;
+        const myCol = currentUser && profileMap[currentUser] && /^#[0-9a-fA-F]{6}$/.test(profileMap[currentUser].color || '') ? profileMap[currentUser].color : null;
+        const mvpCol = (String(param) === lastMatchId && myCol) ? myCol : '#fbbf24';
         const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == param);
         const e1 = details.filter(d => String(d.Equipo).includes('1'));
         const e2 = details.filter(d => String(d.Equipo).includes('2'));
+        const matchVotes = (DB['VOTACIONES'] || []).filter(v => v.ID_Partido == param);
+        const votingClosed = cleanVal(match.MVP) !== '';
+        let votesHtml = '';
+        if (matchVotes.length > 0) {
+            const votesRows = votingClosed ? matchVotes.map(v => {
+                let notasTxt = '';
+                try { const nt = JSON.parse(v.Notas); notasTxt = Object.entries(nt).filter(([k, val]) => val > 0).sort((a, b) => b[1] - a[1]).map(([k, val]) => `${k}: ${val}`).join(' · '); } catch(e) {}
+                return `<div class="gen-player" style="flex-direction: column; align-items: flex-start; gap: 4px;"><span class="text-white text-sm"><b>${v.Votador}</b> → MVP: <span style="color: ${mvpCol}; font-weight: 700;">${cleanVal(v.MVP) || '—'}</span></span><span class="text-[11px] text-gray-400 leading-relaxed">${notasTxt || '<i class="text-gray-600">sin notas</i>'}</span></div>`;
+            }).join('') : `<p class="text-gray-400 text-sm py-2">🗳️ Votación en curso — ${matchVotes.length}/${details.length} votaron. El detalle se revela cuando el admin la cierre.</p>`;
+            votesHtml = `<h3 class="text-2xl font-black mb-4 text-white border-l-4 border-yellow-500 pl-3 mt-8">🗳️ Votación del Partido</h3><div class="glass rounded-2xl border border-white/10 p-4 mb-8">${votesRows}</div>`;
+        }
         const groupAndMap = (team, teamNum) => {
             const groups = {};
             team.forEach(p => {
@@ -526,9 +585,9 @@ function showView(view, param = null) {
                     let y = 50;
                     if(playersInPos.length === 1) { if (pos.includes('L')) y = 75; else if (pos.includes('R')) y = 25; else y = 50; } 
                     else { y = 50 + ((idx - (playersInPos.length - 1) / 2) * 25); }
-                    const isMvp = match.MVP === p.Jugador;
-                    html += `<div class="player-pin flex flex-col items-center" style="left: ${x}%; top: ${y}%;" onclick="showView('playerProfile', '${p.Jugador}')"><div class="w-10 h-10 md:w-14 md:h-14 rounded-full ${teamNum === 1 ? 'bg-blue-500/20 border-blue-400' : 'bg-red-500/20 border-red-400'} border-2 flex items-center justify-center text-xs md:text-sm font-black text-white backdrop-blur ${isMvp ? 'ring-4 ring-yellow-400 border-yellow-400' : ''}">${pos}</div><span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white max-w-[60px] md:max-w-[100px] truncate block">${p.Jugador}</span></div>`;
-                });
+                    const isMvp = cleanVal(match.MVP) === p.Jugador;
+                    html += `<div class="player-pin flex flex-col items-center" style="left: ${x}%; top: ${y}%;" onclick="showView('playerProfile', '${p.Jugador}')"><div class="w-10 h-10 md:w-14 md:h-14 rounded-full ${teamNum === 1 ? 'bg-blue-500/20 border-blue-400' : 'bg-red-500/20 border-red-400'} border-2 flex items-center justify-center text-xs md:text-sm font-black text-white backdrop-blur" ${isMvp ? `style="border-color: ${mvpCol}; box-shadow: 0 0 0 4px ${mvpCol};"` : ''}>${pos}</div><span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white max-w-[60px] md:max-w-[100px] truncate block">${p.Jugador}</span></div>`;
+                                });
             }
             return html;
         };
@@ -550,13 +609,14 @@ function showView(view, param = null) {
             <div class="flex flex-col md:flex-row gap-6">
                 <div class="flex-1 w-full md:w-1/2">
                     <h3 class="text-xl font-black mb-3 text-blue-400 border-l-4 border-blue-500 pl-3">Equipo 1</h3>
-                    <div class="space-y-2">${e1.map(p => `<div onclick="showView('playerProfile', '${p.Jugador}')" class="glass p-3 rounded-xl flex items-center justify-between ${match.MVP === p.Jugador ? 'border border-yellow-400 bg-yellow-500/10' : ''} cursor-pointer hover:bg-white/10 transition"><div class="flex items-center gap-3"><img src="${getPhoto(p.Jugador)}" class="w-8 h-8 rounded-full object-cover"><span class="font-semibold text-sm ${match.MVP === p.Jugador ? 'text-yellow-400' : 'text-white'}">${p.Jugador} ${match.MVP === p.Jugador ? '🎩' : ''}</span></div><div class="flex gap-4 text-sm font-bold"><span class="text-blue-400">⚽ ${n(p.Goles)}</span><span class="text-yellow-400">⭐ ${p.Nota}</span></div></div>`).join('')}</div>
+                    <div class="space-y-2">${e1.map(p => `<div onclick="showView('playerProfile', '${p.Jugador}')" class="glass p-3 rounded-xl flex items-center justify-between ${cleanVal(match.MVP) === p.Jugador ? 'border border-yellow-400 bg-yellow-500/10' : ''} cursor-pointer hover:bg-white/10 transition"><div class="flex items-center gap-3"><img src="${getPhoto(p.Jugador)}" class="w-8 h-8 rounded-full object-cover"><span class="font-semibold text-sm ${cleanVal(match.MVP) === p.Jugador ? 'text-yellow-400' : 'text-white'}">${p.Jugador} ${cleanVal(match.MVP) === p.Jugador ? '🎩' : ''}</span></div><div class="flex gap-4 text-sm font-bold"><span class="text-blue-400">⚽ ${n(p.Goles)}</span><span class="text-yellow-400">⭐ ${p.Nota}</span></div></div>`).join('')}</div>
                 </div>
                 <div class="flex-1 w-full md:w-1/2">
                     <h3 class="text-xl font-black mb-3 text-red-400 border-l-4 border-red-500 pl-3">Equipo 2</h3>
-                    <div class="space-y-2">${e2.map(p => `<div onclick="showView('playerProfile', '${p.Jugador}')" class="glass p-3 rounded-xl flex items-center justify-between ${match.MVP === p.Jugador ? 'border border-yellow-400 bg-yellow-500/10' : ''} cursor-pointer hover:bg-white/10 transition"><div class="flex items-center gap-3"><img src="${getPhoto(p.Jugador)}" class="w-8 h-8 rounded-full object-cover"><span class="font-semibold text-sm ${match.MVP === p.Jugador ? 'text-yellow-400' : 'text-white'}">${p.Jugador} ${match.MVP === p.Jugador ? '🎩' : ''}</span></div><div class="flex gap-4 text-sm font-bold"><span class="text-blue-400">⚽ ${n(p.Goles)}</span><span class="text-yellow-400">⭐ ${p.Nota}</span></div></div>`).join('')}</div>
+                    <div class="space-y-2">${e2.map(p => `<div onclick="showView('playerProfile', '${p.Jugador}')" class="glass p-3 rounded-xl flex items-center justify-between ${cleanVal(match.MVP) === p.Jugador ? 'border border-yellow-400 bg-yellow-500/10' : ''} cursor-pointer hover:bg-white/10 transition"><div class="flex items-center gap-3"><img src="${getPhoto(p.Jugador)}" class="w-8 h-8 rounded-full object-cover"><span class="font-semibold text-sm ${cleanVal(match.MVP) === p.Jugador ? 'text-yellow-400' : 'text-white'}">${p.Jugador} ${cleanVal(match.MVP) === p.Jugador ? '🎩' : ''}</span></div><div class="flex gap-4 text-sm font-bold"><span class="text-blue-400">⚽ ${n(p.Goles)}</span><span class="text-yellow-400">⭐ ${p.Nota}</span></div></div>`).join('')}</div>
                 </div>
             </div>
+            ${votesHtml}
         `;
     }
     else if(view === 'players') {
@@ -590,7 +650,8 @@ function showView(view, param = null) {
         const s = tempData.find(j => j.JUGADOR === param) || hist;
         const ovr = n(s.OVERALL);
         const cardType = getCardType(ovr);
-        const fifaStats = generateFifaStats(s); 
+        const fifaStats = getFifaStatsFor(s, hist.JUGADOR);
+        const meData = profileMap[hist.JUGADOR] || {};
         const { bestMate, worstRival, stadiumStats } = getTeammatesAndRivals(param); 
         const templateName = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' }[cardType];
         const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID CARTA');
@@ -598,14 +659,15 @@ function showView(view, param = null) {
         const cardHTML = `
             <div style="width: 280px; height: 392px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto;">
                 <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
-                <div style="position: absolute; top: 60px; left: 62px; text-align: center; color: ${txtColor};">
+                <div style="position: absolute; top: 60px; left: 65px; text-align: center; color: ${txtColor};">
                     <p style="font-size: 2.2rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif;">${ovr}</p>
                     <p style="font-size: 1rem; font-weight: 700; margin-top: 2px;">${hist.POSICION}</p>
                 </div>
-                <div style="position: absolute; top: 80px; left: 51%; transform: translateX(-50%); width: 100px; height: 115px;">
+                <div style="position: absolute; top: 85px; left: 52%; transform: translateX(-50%); width: 100px; height: 115px;">
                     <img src="${getPhoto(hist.JUGADOR)}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
                 </div>
                 <p style="position: absolute; top: 210px; left: 50%; transform: translateX(-50%); font-size: 1rem; font-weight: 900; text-transform: uppercase; color: ${txtColor}; white-space: nowrap;">${hist.JUGADOR}</p>
+                    ${(getFlagUrl(meData.pais) || getClubUrl(meData.club)) ? `<div style="position: absolute; top: 130px; left: 50%; transform: translateX(-50%); margin-left: -58px; display: flex; flex-direction: column; gap: 10px; align-items: center;">${getFlagUrl(meData.pais) ? `<img src="${getFlagUrl(meData.pais)}" style="height: 18px; border-radius: 3px;">` : ''}${getClubUrl(meData.club) ? `<img src="${getClubUrl(meData.club)}" style="height: 26px;">` : ''}</div>` : ''}
                 <div style="position: absolute; bottom: 65px; width: 100%; display: flex; justify-content: center; gap: 40px; color: ${txtColor}; font-weight: 900; font-size: 0.9rem; font-family: 'Oswald', sans-serif;">
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">RIT</span><span>${fifaStats[0]}</span></div>
@@ -756,6 +818,79 @@ function showView(view, param = null) {
             <div id="duel-content">${duelP1Name && duelP2Name ? renderDuel() : '<p class="text-center text-gray-600 mt-10">Selecciona ambos jugadores...</p>'}</div>
         `;
     }
+
+    else if (view === 'perfil') {
+        if (!currentUser) { showAlert('Acceso restringido', 'Debés iniciar sesión con tu cuenta para ver tu perfil.', 'error'); return showView('home'); }
+        const me = profileMap[currentUser] || { club: '', pais: '', color: '' };
+        const hist = (DB['HISTORICA'] || []).find(j => j.JUGADOR === currentUser);
+        const ovr = hist ? n(hist.OVERALL) : 0;
+        const pos = hist ? String(hist.POSICION || 'DC') : 'DC';
+        const fifaStats = getFifaStatsFor(hist, currentUser);
+        const cardType = getCardType(ovr);
+        const templateName = { 'bronze': 'BRONCE', 'silver': 'PLATA', 'gold': 'ORO', 'toty': 'TOTY' }[cardType];
+        const cardBg = photosMap[templateName] || svgPlaceholder(300, 420, 'FALTA ID CARTA');
+        const txtColor = cardType === 'toty' ? '#ffffff' : '#000000';
+        const flagUrl = getFlagUrl(me.pais);
+        const clubUrl = getClubUrl(me.club);
+        app.innerHTML = `
+            <h1 class="text-4xl md:text-5xl font-black text-white uppercase mb-2">Mi Perfil</h1>
+            <p class="text-gray-500 mb-8">Personalizá tu carta y tu experiencia</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                <div class="flex justify-center">
+                    <div style="width: 280px; height: 392px; position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <img src="${cardBg}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+                        <div style="position: absolute; top: 60px; left: 65px; text-align: center; color: ${txtColor};">
+                            <p style="font-size: 2.2rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif; margin: 0;">${ovr}</p>
+                            <p style="font-size: 1rem; font-weight: 700; margin: 4px 0 0 0;">${pos}</p>
+                        </div>
+                        <div style="position: absolute; top: 85px; left: 52%; transform: translateX(-50%); width: 100px; height: 115px;">
+                            <img src="${getPhoto(currentUser)}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
+                        </div>
+                        <p style="position: absolute; top: 210px; left: 50%; transform: translateX(-50%); font-size: 1rem; font-weight: 900; text-transform: uppercase; color: ${txtColor}; white-space: nowrap;">${currentUser}</p>
+                        ${(flagUrl || clubUrl) ? `<div style="position: absolute; top: 130px; left: 50%; transform: translateX(-50%); margin-left: -58px; display: flex; flex-direction: column; gap: 10px; align-items: center;">${flagUrl ? `<img src="${flagUrl}" style="height: 18px; border-radius: 3px;">` : ''}${clubUrl ? `<img src="${clubUrl}" style="height: 26px;">` : ''}</div>` : ''}
+                        <div style="position: absolute; bottom: 68px; width: 100%; display: flex; justify-content: center; gap: 40px; color: ${txtColor}; font-weight: 900; font-size: 0.9rem; font-family: 'Oswald', sans-serif;">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">RIT</span><span>${fifaStats[0]}</span></div>
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">TIR</span><span>${fifaStats[1]}</span></div>
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">PAS</span><span>${fifaStats[2]}</span></div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">REG</span><span>${fifaStats[3]}</span></div>
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">DEF</span><span>${fifaStats[4]}</span></div>
+                                <div style="display: flex; justify-content: space-between; width: 60px;"><span style="opacity: 0.8">FIS</span><span>${fifaStats[5]}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass rounded-2xl border border-white/10 p-6 space-y-6">
+                    <h3 class="text-lg font-bold text-gray-300">Personalización</h3>
+                    <div>
+                        <label class="text-sm text-gray-400">Club (escudo en tu carta)</label>
+                        <select id="perfil-club" onchange="saveMyProfile()" class="w-full glass p-3 rounded-xl bg-gray-900 text-white mt-1">
+                            <option value="">Sin club</option>
+                            ${clubesList.map(c => `<option value="${c.CLUB}" ${me.club === c.CLUB ? 'selected' : ''}>${c.CLUB}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">País (bandera en tu carta)</label>
+                        <select id="perfil-pais" onchange="saveMyProfile()" class="w-full glass p-3 rounded-xl bg-gray-900 text-white mt-1">
+                            <option value="">Sin país</option>
+                            ${paisesList.map(p => `<option value="${p.PAIS}" ${me.pais === p.PAIS ? 'selected' : ''}>${p.PAIS}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Color MVP — borde de "Último Partido" en Inicio</label>
+                        <div class="flex items-center gap-3 mt-1">
+                            <input type="color" id="perfil-color" value="${me.color || '#fbbf24'}" onchange="saveMyProfile()" class="w-16 h-10 rounded-lg bg-gray-900 border border-white/10 cursor-pointer p-1">
+                            <span class="text-xs text-gray-500">Se guarda al elegir el color</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600">Tu carta se actualiza al instante. La nota final (OVR) sigue saliendo de tus estadísticas en cancha.</p>
+                </div>
+            </div>
+        `;
+    }
+
     else if(view === 'teamGen') {
         const histData = DB['HISTORICA'] || [];
         app.innerHTML = `
@@ -910,15 +1045,32 @@ function renderAdmin() {
     (DB['PARTIDOS'] || []).forEach(m => { if(m.Estadio && !estadios.includes(m.Estadio)) estadios.push(m.Estadio); });
     if(estadios.length === 0) estadios = ['St. Diego'];
     if(adminSection === 'menu') {
-        app.innerHTML = `<h1 class="text-4xl font-black text-white mb-2">Panel de <span class="text-blue-400">Administración</span></h1><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div onclick="setAdminSection('loadMatch')" class="admin-card"><h3 class="text-blue-400">⚽ Cargar Partido</h3></div><div onclick="setAdminSection('editMatch')" class="admin-card"><h3 class="text-blue-400">✏️ Editar Partido</h3></div><div onclick="setAdminSection('addPlayer')" class="admin-card"><h3 class="text-blue-400">👤 Añadir Jugador</h3></div><div onclick="setAdminSection('deleteMatch')" class="admin-card"><h3 class="text-red-400">🗑️ Eliminar Partido</h3></div><div onclick="setAdminSection('updatePhoto')" class="admin-card"><h3 class="text-blue-400">📷 Gestionar Fotos</h3></div><div onclick="setAdminSection('manageStadiums')" class="admin-card"><h3 class="text-blue-400">🏟️ Gestionar Estadios</h3></div><div onclick="setAdminSection('voting')" class="admin-card"><h3 class="text-yellow-400">🗳️ Votaciones</h3></div><div onclick="setAdminSection('editHome')" class="admin-card"><h3 class="text-blue-400">📝 Editor INICIO</h3></div></div>`;
+        app.innerHTML = `<h1 class="text-4xl font-black text-white mb-2">Panel de <span class="text-blue-400">Administración</span></h1><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div onclick="setAdminSection('loadMatch')" class="admin-card"><h3 class="text-blue-400">⚽ Cargar Partido</h3></div><div onclick="setAdminSection('editMatch')" class="admin-card"><h3 class="text-blue-400">✏️ Editar Partido</h3></div><div onclick="setAdminSection('players')" class="admin-card"><h3 class="text-blue-400">👥 Jugadores</h3></div><div onclick="setAdminSection('deleteMatch')" class="admin-card"><h3 class="text-red-400">🗑️ Eliminar Partido</h3></div><div onclick="setAdminSection('voting')" class="admin-card"><h3 class="text-yellow-400">🗳️ Votaciones</h3></div><div onclick="setAdminSection('manageStadiums')" class="admin-card"><h3 class="text-blue-400">🏟️ Gestionar Estadios</h3></div><div onclick="setAdminSection('editHome')" class="admin-card"><h3 class="text-blue-400">📝 Editor INICIO</h3></div></div>`;
     } 
     else if(adminSection === 'loadMatch' || adminSection === 'editMatch') {
         const isEdit = adminSection === 'editMatch';
         if(isEdit && !adminMatch.ID_Partido) {
-            app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">✏️ Editar Partido</h1><div class="admin-card space-y-4"><select onchange="loadMatchIntoAdmin(this.value)" id="edit_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a editar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select></div>`;
+            app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">✏️ Editar Partido</h1><div class="admin-card space-y-4"><select onchange="loadMatchIntoAdmin(this.value)" id="edit_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a editar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${cleanVal(p.MVP) || '—'})</option>`).join('')}</select></div>`;
             return;
         }
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">${isEdit ? '✏️ Editar' : '⚽ Cargar'} Partido</h1><div class="admin-card mb-6"><div class="grid grid-cols-2 gap-4"><input type="date" id="m_fecha" class="glass p-3 rounded-xl bg-gray-900 text-white" value="${isEdit ? toInputDate(adminMatch.Fecha) : todayInput()}"><select id="m_estadio" class="glass p-3 rounded-xl bg-gray-900 text-white">${estadios.map(e => `<option value="${e}" ${isEdit && adminMatch.Estadio === e ? 'selected' : ''}>${e}</option>`).join('')}</select><select id="m_temp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="1" ${isEdit && adminMatch.Temporada == '1' ? 'selected' : ''}>Temp 1</option><option value="2" ${isEdit ? (adminMatch.Temporada == '2' ? 'selected' : '') : 'selected'}>Temp 2</option></select><select id="m_mvp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="">MVP</option>${(DB['HISTORICA'] || []).map(p=>`<option ${isEdit && adminMatch.MVP === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><div class="flex gap-2 items-center"><span class="font-bold">E1:</span><input type="number" id="m_g1" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E1 : 0}"></div><div class="flex gap-2 items-center"><span class="font-bold">E2:</span><input type="number" id="m_g2" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E2 : 0}"></div></div></div><div class="admin-card mt-4"><div class="grid grid-cols-5 gap-2 mb-4"><select id="p_jugador" class="glass p-2 rounded-lg bg-gray-900 text-white col-span-2"><option value="">Jugador...</option>${(DB['HISTORICA'] || []).map(p=>`<option>${p.JUGADOR}</option>`).join('')}</select><select id="p_equipo" class="glass p-2 rounded-lg bg-gray-900 text-white"><option value="Equipo 1">Eq 1</option><option value="Equipo 2">Eq 2</option></select><input type="number" id="p_goles" placeholder="Goles" class="glass p-2 rounded-lg bg-gray-900 text-white"><input type="number" id="p_nota" placeholder="Nota" class="glass p-2 rounded-lg bg-gray-900 text-white"></div><button onclick="addPlayerToMatch()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl mb-4">+ Agregar</button><div class="space-y-2">${adminMatch.Detalle.map((p, i) => `<div class="gen-player"><span>${p.Jugador} (Eq ${p.Equipo}) - ⚽${p.Goles} ⭐${p.Nota}</span><button onclick="removePlayerFromMatch(${i})" class="text-red-500 font-bold">X</button></div>`).join('')}</div></div><button onclick="${isEdit ? 'saveEditedMatch()' : 'saveMatch()'}" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-lg mt-4">${isEdit ? 'GUARDAR CAMBIOS' : 'GUARDAR PARTIDO'}</button>`;
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">${isEdit ? '✏️ Editar' : '⚽ Cargar'} Partido</h1><div class="admin-card mb-6"><div class="grid grid-cols-2 gap-4"><input type="date" id="m_fecha" class="glass p-3 rounded-xl bg-gray-900 text-white" value="${isEdit ? toInputDate(adminMatch.Fecha) : todayInput()}"><select id="m_estadio" class="glass p-3 rounded-xl bg-gray-900 text-white">${estadios.map(e => `<option value="${e}" ${isEdit && adminMatch.Estadio === e ? 'selected' : ''}>${e}</option>`).join('')}</select><select id="m_temp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="1" ${isEdit && adminMatch.Temporada == '1' ? 'selected' : ''}>Temp 1</option><option value="2" ${isEdit ? (adminMatch.Temporada == '2' ? 'selected' : '') : 'selected'}>Temp 2</option></select><select id="m_mvp" class="glass p-3 rounded-xl bg-gray-900 text-white"><option value="">MVP</option>${(DB['HISTORICA'] || []).map(p=>`<option ${isEdit && cleanVal(adminMatch.MVP) === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><div class="flex gap-2 items-center"><span class="font-bold">E1:</span><input type="number" id="m_g1" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E1 : 0}"></div><div class="flex gap-2 items-center"><span class="font-bold">E2:</span><input type="number" id="m_g2" class="glass p-3 rounded-xl bg-gray-900 text-white w-20" value="${isEdit ? adminMatch.Goles_E2 : 0}"></div></div></div><div class="admin-card mt-4"><div class="grid grid-cols-5 gap-2 mb-4"><select id="p_jugador" class="glass p-2 rounded-lg bg-gray-900 text-white col-span-2"><option value="">Jugador...</option>${(DB['HISTORICA'] || []).map(p=>`<option>${p.JUGADOR}</option>`).join('')}</select><select id="p_equipo" class="glass p-2 rounded-lg bg-gray-900 text-white"><option value="Equipo 1">Eq 1</option><option value="Equipo 2">Eq 2</option></select><input type="number" id="p_goles" placeholder="Goles" class="glass p-2 rounded-lg bg-gray-900 text-white"><input type="number" id="p_nota" placeholder="Nota" class="glass p-2 rounded-lg bg-gray-900 text-white"></div><button onclick="addPlayerToMatch()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl mb-4">+ Agregar</button><div class="space-y-2">${adminMatch.Detalle.map((p, i) => `<div class="gen-player"><span>${p.Jugador} (Eq ${p.Equipo}) - ⚽${p.Goles} ⭐${p.Nota}</span><button onclick="removePlayerFromMatch(${i})" class="text-red-500 font-bold">X</button></div>`).join('')}</div></div><button onclick="${isEdit ? 'saveEditedMatch()' : 'saveMatch()'}" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-lg mt-4">${isEdit ? 'GUARDAR CAMBIOS' : 'GUARDAR PARTIDO'}</button>`;
+    }
+    else if(adminSection === 'players') {
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">👥 Jugadores</h1><div class="admin-card mb-6 flex flex-col md:flex-row gap-3"><input type="text" id="admin-player-search" oninput="renderAdminPlayersList(this.value)" placeholder="Buscar jugador..." class="glass p-3 rounded-xl bg-gray-900 text-white flex-grow"><button onclick="setAdminSection('addPlayer')" class="bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-6 rounded-xl whitespace-nowrap">➕ Añadir Jugador</button></div><div id="admin-players-list" class="space-y-2">${renderAdminPlayersList('')}</div>`;
+    }
+    else if(adminSection === 'playerEditor') {
+        if (!adminSelectedPlayer) { adminSection = 'players'; return renderAdmin(); }
+        const m = profileMap[adminSelectedPlayer] || {};
+        const histP = (DB['HISTORICA'] || []).find(p => p.JUGADOR === adminSelectedPlayer) || {};
+        const defaults = generateFifaStats(histP);
+        const statVal = (v, d) => (n(v) > 0 ? n(v) : d);
+        app.innerHTML = `<button onclick="setAdminSection('players')" class="btn-back"><- Jugadores</button><h1 class="text-3xl font-black text-white mb-1">✏️ ${adminSelectedPlayer}</h1><p class="text-gray-500 mb-6 text-sm">Stats FIFA manuales — se guardan al cambiar cada valor</p><div class="admin-card mb-6"><div class="grid grid-cols-2 md:grid-cols-3 gap-4">${['RIT','TIR','PAS','REG','DEF','FIS'].map((s, i) => `<div><label class="text-xs text-gray-400 uppercase font-bold">${s}</label><input type="number" min="0" max="99" id="stat-${s.toLowerCase()}" value="${statVal(m[s.toLowerCase()], defaults[i])}" onchange="savePlayerStat('${s.toLowerCase()}', this.value)" class="w-full glass p-3 rounded-xl bg-gray-900 text-white mt-1 text-center"></div>`).join('')}</div><p id="stat-save-status" class="text-xs text-gray-500 mt-4 text-center h-4"></p><p class="text-xs text-gray-600 text-center mt-2">Si dejás una stat en 0, se usa el cálculo automático por rendimiento</p></div><button onclick="openPhotoEditorFor('${adminSelectedPlayer}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">📷 GESTIONAR FOTO DE ${adminSelectedPlayer.toUpperCase()}</button>`;
+    }
+    else if(adminSection === 'addPlayer') {
+        app.innerHTML = `<button onclick="setAdminSection('players')" class="btn-back"><- Jugadores</button><h1 class="text-3xl font-black text-white mb-6">👤 Añadir Nuevo Jugador</h1><div class="admin-card space-y-4"><input type="text" id="new_player_name" placeholder="Nombre y Apellido" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><input type="text" id="new_player_pos" placeholder="Posición (Ej: DC, CM, GK)" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="saveNewPlayer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">CREAR JUGADOR</button></div>`;
+    }
+    else if(adminSection === 'updatePhoto') {
+        app.innerHTML = `<button onclick="setAdminSection(adminSelectedPlayer ? 'playerEditor' : 'menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📷 Insertar/Cambiar Foto</h1><div class="admin-card space-y-4"><select id="photo_player_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${(DB['HISTORICA'] || []).map(p => `<option value="${p.JUGADOR}" ${adminSelectedPlayer === p.JUGADOR ? 'selected' : ''}>${p.JUGADOR}</option>`).join('')}</select><input type="text" id="photo_id_input" placeholder="ID de Google Drive" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="savePhoto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR FOTO (DRIVE)</button></div>`;
     }
     else if(adminSection === 'manageStadiums') {
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🏟️ Gestionar Estadios</h1><div class="admin-card space-y-4"><div class="space-y-2">${estadios.map(e => `<div class="gen-player"><span>${e}</span><div class="flex gap-2"><button onclick="editStadium('${e}')" class="text-blue-400">✏️</button><button onclick="deleteStadium('${e}')" class="text-red-500">❌</button></div></div>`).join('')}</div><input type="text" id="new_stadium_name" placeholder="Nombre del nuevo estadio" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="saveStadium()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">AÑADIR ESTADIO</button></div>`;
@@ -927,8 +1079,7 @@ function renderAdmin() {
         const currentText = DB['CONFIG'] && DB['CONFIG'].home_text ? DB['CONFIG'].home_text : '';
         app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📝 Editor INICIO</h1><div class="admin-card space-y-4"><textarea id="home_text_input" rows="5" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${currentText}</textarea><button onclick="saveHomeText()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR TEXTO</button></div>`;
     }
-    
-        else if(adminSection === 'voting') {
+    else if(adminSection === 'voting') {
         const matches = (DB['PARTIDOS'] || []).slice().reverse();
         const votes = DB['VOTACIONES'] || [];
         const abiertos = matches.filter(m => isBlank(m.MVP));
@@ -971,15 +1122,8 @@ function renderAdmin() {
             </div>
         `;
     }
-
-    else if(adminSection === 'updatePhoto') {
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">📷 Insertar/Cambiar Foto</h1><div class="admin-card space-y-4"><select id="photo_player_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white">${(DB['HISTORICA'] || []).map(p => `<option value="${p.JUGADOR}">${p.JUGADOR}</option>`).join('')}</select><input type="text" id="photo_id_input" placeholder="ID de Google Drive" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="savePhoto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">GUARDAR FOTO (DRIVE)</button></div>`;
-    }
-    else if(adminSection === 'addPlayer') {
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">👤 Añadir Nuevo Jugador</h1><div class="admin-card space-y-4"><input type="text" id="new_player_name" placeholder="Nombre y Apellido" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><input type="text" id="new_player_pos" placeholder="Posición (Ej: DC, CM, GK)" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><button onclick="saveNewPlayer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl">CREAR JUGADOR</button></div>`;
-    }
     else if(adminSection === 'deleteMatch') {
-        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🗑️ Eliminar Partido</h1><div class="admin-card space-y-4"><select id="del_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a borrar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${p.MVP})</option>`).join('')}</select><button onclick="deleteMatch()" class="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl">ELIMINAR PARTIDO SELECCIONADO</button></div>`;
+        app.innerHTML = `<button onclick="setAdminSection('menu')" class="btn-back"><- Volver</button><h1 class="text-3xl font-black text-white mb-6">🗑️ Eliminar Partido</h1><div class="admin-card space-y-4"><select id="del_match_select" class="w-full glass p-3 rounded-xl bg-gray-900 text-white"><option value="">Elegir partido a borrar...</option>${(DB['PARTIDOS'] || []).map(p => `<option value="${p.ID_Partido}">${formatDate(p.Fecha)} - ${p.Goles_E1} a ${p.Goles_E2} (${cleanVal(p.MVP) || '—'})</option>`).join('')}</select><button onclick="deleteMatch()" class="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl">ELIMINAR PARTIDO SELECCIONADO</button></div>`;
     }
 }
 
@@ -1023,7 +1167,7 @@ async function saveNewPlayer() {
         if(data.status === 'success') { 
             showAlert('Jugador Creado', 'El jugador fue añadido a la base de datos.'); 
             await loadData(); 
-            setAdminSection('menu'); 
+            setAdminSection('players'); 
         } else { 
             showAlert('Error del Servidor', data.message || 'No se pudo crear.', 'error'); 
         } 
@@ -1043,13 +1187,14 @@ async function deleteMatch() {
 }
 
 async function savePhoto() { 
-    const n = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; 
+    const nombre = document.getElementById('photo_player_select').value, id = document.getElementById('photo_id_input').value; 
     if(!id) return showAlert('Faltan datos', 'Tenés que pegar un ID de Drive.', 'error'); 
     try { 
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: n, FotoId: id, Password: adminPassword }) }); 
-        showAlert('Foto Guardada', 'La imagen se vinculó correctamente.'); await loadData(); setAdminSection('menu'); 
+        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePhoto', Nombre: nombre, FotoId: id, Password: adminPassword }) }); 
+        showAlert('Foto Guardada', 'La imagen se vinculó correctamente.'); await loadData(); setAdminSection(adminSelectedPlayer ? 'playerEditor' : 'menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
+
 async function saveStadium() { 
     const n = document.getElementById('new_stadium_name').value; 
     if(!n) return showAlert('Faltan datos', 'Escribí el nombre del estadio.', 'error'); 
@@ -1080,11 +1225,45 @@ async function saveHomeText() {
         showAlert('Texto Guardado', 'La noticia del inicio fue actualizada.'); await loadData(); setAdminSection('menu'); 
     } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); } 
 }
+function renderAdminPlayersList(query) {
+    const hist = DB['HISTORICA'] || [];
+    const q = String(query || '').toLowerCase();
+    const list = hist.filter(p => String(p.JUGADOR).toLowerCase().includes(q));
+    if (list.length === 0) return '<p class="text-gray-500">No se encontraron jugadores.</p>';
+    return list.map(p => {
+        const m = profileMap[p.JUGADOR] || {};
+        const hasManual = (m.rit || m.tir || m.pas || m.reg || m.def || m.fis) ? '✅ manuales' : '— automáticas';
+        return `<div onclick="setAdminPlayer('${p.JUGADOR}')" class="admin-card p-4 flex justify-between items-center"><div class="flex items-center gap-3"><img src="${getPhoto(p.JUGADOR)}" class="w-10 h-10 rounded-full object-cover"><div><p class="font-bold text-white">${p.JUGADOR}</p><p class="text-xs text-gray-500">${p.POSICION || '-'} | OVR ${n(p.OVERALL)}</p></div></div><span class="text-xs text-gray-500">Stats: ${hasManual}</span></div>`;
+    }).join('');
+}
+
+function setAdminPlayer(name) { adminSelectedPlayer = name; adminSection = 'playerEditor'; renderAdmin(); }
+
+function openPhotoEditorFor(name) { adminSelectedPlayer = name; adminSection = 'updatePhoto'; renderAdmin(); }
+
+async function savePlayerStat(key, value) {
+    const g = (id) => { const el = document.getElementById(id); return el ? el.value : 0; };
+    const status = document.getElementById('stat-save-status');
+    if (status) { status.textContent = 'Guardando ' + key.toUpperCase() + '...'; status.className = 'text-xs text-yellow-400 mt-4 text-center h-4'; }
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'savePlayerStats', Nombre: adminSelectedPlayer, Password: adminPassword, RIT: g('stat-rit'), TIR: g('stat-tir'), PAS: g('stat-pas'), REG: g('stat-reg'), DEF: g('stat-def'), FIS: g('stat-fis') }) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            if (!profileMap[adminSelectedPlayer]) profileMap[adminSelectedPlayer] = {};
+            profileMap[adminSelectedPlayer] = { ...profileMap[adminSelectedPlayer], rit: n(g('stat-rit')), tir: n(g('stat-tir')), pas: n(g('stat-pas')), reg: n(g('stat-reg')), def: n(g('stat-def')), fis: n(g('stat-fis')) };
+            if (status) { status.textContent = '✓ ' + key.toUpperCase() + ' guardado'; status.className = 'text-xs text-green-400 mt-4 text-center h-4'; }
+        } else {
+            if (status) { status.textContent = '✗ ' + (data.message || 'Error'); status.className = 'text-xs text-red-400 mt-4 text-center h-4'; }
+        }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
+}
+
 function addPlayerToMatch() { 
     const j = document.getElementById('p_jugador').value, e = document.getElementById('p_equipo').value, g = document.getElementById('p_goles').value, nt = document.getElementById('p_nota').value; 
     if(!j) return showAlert('Faltan datos', 'Elegí un jugador.', 'error'); 
     adminMatch.Detalle.push({ Jugador: j, Equipo: e, Goles: g, Nota: nt }); renderAdmin(); 
 }
+
 function removePlayerFromMatch(i) { adminMatch.Detalle.splice(i, 1); renderAdmin(); }
 
 async function saveMatch() { 
@@ -1187,8 +1366,9 @@ function generateTeams() {
 function updateCardGen(field, value) {
     if(field === 'name') {
         cardGenData.name = value;
-        const p = DB['HISTORICA'].find(p => p.JUGADOR === value);
-        if(p) { cardGenData.pos = p.POSICION; cardGenData.photo = getPhoto(value); }
+        const p = (DB['HISTORICA'] || []).find(p => p.JUGADOR === value);
+        cardGenData.photo = getPhoto(value);
+        if(p) { cardGenData.pos = p.POSICION; }
     } else if(field === 'ovr') cardGenData.ovr = n(value);
     else if(field === 'pos') cardGenData.pos = value;
     else cardGenData.stats[field] = n(value);
@@ -1207,7 +1387,7 @@ function updateCardPreview() {
             <img src="${cardBg}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="fixBrokenImg(this, 300, 420, 'CARTA')">
             <div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 55px 24px 24px;">
                 <div style="display: flex; justify-content: center; align-items: flex-start; gap: 18px;">
-                    <div style="position: relative; top: 8px; left: 3px; text-align: center; color: ${txtColor};">
+                    <div style="position: relative; top: 8px; left: 6px; text-align: center; color: ${txtColor};">
                         <p style="font-size: 2.5rem; font-weight: 900; line-height: 1; font-family: 'Oswald', sans-serif; margin: 0;">${ovr}</p>
                         <p style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0;">${cardGenData.pos}</p>
                     </div>
@@ -1216,6 +1396,7 @@ function updateCardPreview() {
                     </div>
                 </div>
                 <p style="position: relative; top: 40px; left: 2px; margin: 12px 0 0 0; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: ${txtColor}; white-space: nowrap;">${cardGenData.name}</p>
+                                ${(getFlagUrl((profileMap[cardGenData.name] || {}).pais) || getClubUrl((profileMap[cardGenData.name] || {}).club)) ? `<div style="position: relative; top: -85px; left: -61px; margin: 8px auto 0 auto; display: flex; flex-direction: column; gap: 10px; align-items: center;">${getFlagUrl((profileMap[cardGenData.name] || {}).pais) ? `<img src="${getFlagUrl((profileMap[cardGenData.name] || {}).pais)}" style="height: 18px; border-radius: 3px;">` : ''}${getClubUrl((profileMap[cardGenData.name] || {}).club) ? `<img src="${getClubUrl((profileMap[cardGenData.name] || {}).club)}" style="height: 26px;">` : ''}</div>` : ''}
                 <div style="position: relative; top: -50px; margin-top: auto; display: flex; gap: 45px; color: ${txtColor}; font-weight: 900; font-size: 1rem; font-family: 'Oswald', sans-serif;">
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <div style="display: flex; justify-content: space-between; width: 70px;"><span style="opacity: 0.8">RIT</span><span>${cardGenData.stats.rit}</span></div>
@@ -1285,24 +1466,51 @@ function openLoginModal() {
     document.body.appendChild(modal);
 }
 
+async function saveMyProfile() {
+    const club = document.getElementById('perfil-club').value;
+    const pais = document.getElementById('perfil-pais').value;
+    const color = document.getElementById('perfil-color').value;
+    try {
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMyProfile', Nombre: currentUser, Club: club, Pais: pais, ColorMVP: color }) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            if (!profileMap[currentUser]) profileMap[currentUser] = { rit:0, tir:0, pas:0, reg:0, def:0, fis:0 };
+            profileMap[currentUser].club = club;
+            profileMap[currentUser].pais = pais;
+            profileMap[currentUser].color = color;
+            showView('perfil');
+            showAlert('¡Listo!', 'Tu perfil se actualizó.');
+        } else {
+            showAlert('Error', data.message || 'No se pudo guardar.', 'error');
+        }
+    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
+}
+
 async function submitLogin() {
     const name = document.getElementById('login-name').value;
     const pin = document.getElementById('login-pin').value;
-    document.getElementById('login-modal').remove();
-    
+    const modal = document.getElementById('login-modal');
+    if (modal) { modal.style.opacity = '0.6'; modal.style.pointerEvents = 'none'; }
     try {
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', Nombre: name, PIN: pin }) });
         const data = await res.json();
-        if(data.status === 'success') {
+        if (data.status === 'success') {
             currentUser = data.user;
             localStorage.setItem('tecsports_user', currentUser);
+            if (modal) modal.remove();
             showAlert('¡Bienvenido!', `Sesión iniciada como ${currentUser}.`);
-            updateAuthButtons(); // CAMBIA EL BOTÓN A ROJO
+            updateAuthButtons();
             showView('home');
         } else {
-            showAlert('Error', 'PIN incorrecto.', 'error');
+            if (modal) { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }
+            const pinInput = document.getElementById('login-pin');
+            if (pinInput) { pinInput.value = ''; pinInput.focus(); }
+            showAlert('Error', data.message || 'PIN incorrecto.', 'error');
         }
-    } catch(e) { showAlert('Error', 'No se pudo conectar.', 'error'); }
+    } catch(e) {
+        if (modal) { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }
+        showAlert('Error', 'No se pudo conectar.', 'error');
+    }
 }
 
 function openLogoutModal() {
@@ -1439,20 +1647,26 @@ async function submitVote(matchId) {
 
 async function submitAdminPass() {
     const pass = document.getElementById('admin-pass-input').value;
-    document.getElementById('admin-modal').remove();
     if(!pass) return;
+    const modal = document.getElementById('admin-modal');
+    if (modal) { modal.style.opacity = '0.6'; modal.style.pointerEvents = 'none'; }
     try { 
         const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'checkAdmin', Password: pass }) }); 
         const data = await res.json(); 
         if(data.status === 'success' && data.isAdmin) { 
             adminPassword = pass; 
             adminSection = 'menu'; 
+            if (modal) modal.remove();
             showView('admin'); 
         } else { 
-            alert("Clave incorrecta."); 
+            if (modal) { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }
+            const inp = document.getElementById('admin-pass-input');
+            if (inp) { inp.value = ''; inp.focus(); }
+            showAlert('Clave incorrecta', 'Verificá la clave e intentá de nuevo.', 'error');
         } 
     } catch(e) { 
-        alert("Error de conexión."); 
+        if (modal) { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }
+        showAlert('Error', 'No se pudo conectar.', 'error');
     } 
 }
 
@@ -1516,7 +1730,7 @@ function renderDuel() {
 }
 
 // --- SISTEMA DE RUTAS (URLs REALES) ---
-const validViews = ['home', 'players', 'seasons', 'duels', 'matchDetail', 'playerProfile', 'admin', 'cardGen', 'teamGen'];
+const validViews = ['home', 'players', 'seasons', 'duels', 'matchDetail', 'playerProfile', 'admin', 'cardGen', 'teamGen', 'perfil'];
 let BASE_URL = '';
 
 function getBasePath() {
