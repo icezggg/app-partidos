@@ -43,8 +43,17 @@
                     </div>
                     
                     <!-- SEPARADOR Y BOTONES A LA DERECHA -->
-                    <div class="flex items-center gap-2 ml-6 pl-6 border-l border-white/10">
-                        <button id="auth-btn-pc" onclick="openLoginModal()" class="sidebar-link font-display tracking-wide text-lg uppercase text-green-400 hover:text-green-300">Ingresar</button>
+                <div class="flex items-center gap-2 ml-6 pl-6 border-l border-white/10">
+                    <button id="auth-btn-pc" onclick="openLoginModal()" class="sidebar-link font-display tracking-wide text-lg uppercase text-green-400 hover:text-green-300">Ingresar</button>
+                        <div id="user-area-pc" class="relative group hidden">
+                            <button id="user-name-pc" class="sidebar-link font-display tracking-wide text-lg uppercase text-blue-400">Usuario ▾</button>
+                            <div class="absolute hidden group-hover:block top-full right-0 w-48 pt-1 z-50">
+                                <div class="bg-gray-900 rounded-xl p-2 border border-white/10">
+                                    <a href="#" onclick="showView('perfil')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">👤 Mi Perfil</a>
+                                    <a href="#" onclick="openLogoutModal()" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm text-red-400">🚪 Cerrar Sesión</a>
+                                </div>
+                            </div>
+                        </div>
                         <button onclick="checkAdmin()" class="sidebar-link font-display tracking-wide text-lg uppercase text-gray-400 hover:text-gray-200">Admin</button>
                     </div>
                 </div>
@@ -68,8 +77,17 @@
             </nav>
             
             <!-- BOTONES ABAJO PEGADOS AL BORDE INFERIOR -->
-            <div class="p-6 border-t border-white/10 flex gap-4">
-                <button id="auth-btn-mobile" onclick="openLoginModal()" class="sidebar-link text-xl flex-1 text-center text-green-400 hover:text-green-300 uppercase font-display tracking-wide">Ingresar</button>
+<div class="p-6 border-t border-white/10 flex gap-4">
+    <button id="auth-btn-mobile" onclick="openLoginModal()" class="sidebar-link text-xl flex-1 text-center text-green-400 hover:text-green-300 uppercase font-display tracking-wide">Ingresar</button>
+    <div id="user-area-mobile" class="hidden flex-1 relative">
+        <button onclick="toggleUserDropdownMobile()" id="user-name-mobile" class="sidebar-link text-xl w-full text-center text-blue-400 uppercase font-display tracking-wide">Usuario ▾</button>
+        <div id="user-dropdown-mobile" class="hidden absolute bottom-full left-0 right-0 mb-2 z-50">
+            <div class="bg-gray-900 rounded-xl p-2 border border-white/10">
+                <a href="#" onclick="toggleUserDropdownMobile(); toggleDrawer(); showView('perfil')" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm">👤 Mi Perfil</a>
+                <a href="#" onclick="toggleUserDropdownMobile(); toggleDrawer(); openLogoutModal()" class="block px-4 py-2 hover:bg-white/5 rounded-lg text-sm text-red-400">🚪 Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
                 <button onclick="toggleDrawer(); checkAdmin()" class="sidebar-link text-xl flex-1 text-center text-gray-400 hover:text-white uppercase font-display tracking-wide">⚙️ Admin</button>
             </div>
         </div>
