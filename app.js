@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_8gIn4bAGzr3Cs2ts8WsaKfzihpEOGWqfAM2c2hXS_dFz/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_8gIn4bAGzr3Cs2ts8WsaKfzihpEOGWqfAM2c2hXS_dFz/exec"; 
 let DB = {}; let photosMap = {};
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
