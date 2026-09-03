@@ -363,7 +363,7 @@ function showView(view, param = null) {
         const esquinaBg = photosMap['ESQUINA'] || svgPlaceholder(1920, 1080, 'TecSports');
         const homeText = cleanVal(DB['CONFIG'] && DB['CONFIG'].home_text);
         const mvpPlayerName = cleanVal(lastMatch?.MVP);
-        const mvpCol = (mvpPlayerName && profileMap[mvpPlayerName] && /^#[0-9a-fA-F]{6}$/.test(profileMap[mvpPlayerName].color || '')) ? profileMap[mvpPlayerName].color : '#fbbf24';  
+        const mvpCol = (mvpPlayerName && profileMap[mvpPlayerName] && /^#[0-9a-fA-F]{6}$/.test(profileMap[mvpPlayerName].color || '')) ? profileMap[mvpPlayerName].color : '#fbbf24';
 
         // LÓGICA DE VOTACIÓN + BARRA DE PROGRESO
         const votes = DB['VOTACIONES'] || [];
