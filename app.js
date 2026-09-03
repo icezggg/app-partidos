@@ -442,7 +442,7 @@ function showView(view, param = null) {
             const scorers2 = formatScorers(e2);
 
             matchCardHTML = `
-                <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full" ${myMvpColor ? `style="border-color: ${myMvpColor}; box-shadow: 0 0 25px ${myMvpColor}66;"` : ''}>
+               <div onclick="showView('matchDetail', '${lastMatch.ID_Partido}')" class="last-match-card glow-blue h-full" style="border-color: ${mvpCol}; box-shadow: 0 0 25px ${mvpCol}66;">
                     <div class="last-match-bg" style="background-image: url('${esquinaBg}')"></div>
                     <div class="last-match-content py-4">
                         <div class="flex justify-end items-center mb-2">
