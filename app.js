@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_8gIn4bAGzr3Cs2ts8WsaKfzihpEOGWqfAM2c2hXS_dFz/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbwilvlAfcnHVDQ_lEHL3XG_8gIn4bAGzr3Cs2ts8WsaKfzihpEOGWqfAM2c2hXS_dFz/exec";
 let DB = {}; let photosMap = {};
 let currentSeason = '2'; let currentProfileSeason = 'hist'; let currentDuelSeason = 'hist';
 let duelP1Name = null; let duelP2Name = null;
@@ -364,7 +364,6 @@ function showView(view, param = null) {
         const homeText = cleanVal(DB['CONFIG'] && DB['CONFIG'].home_text);
         const mvpPlayerName = cleanVal(lastMatch?.MVP);
         const mvpCol = (mvpPlayerName && profileMap[mvpPlayerName] && /^#[0-9a-fA-F]{6}$/.test(profileMap[mvpPlayerName].color || '')) ? profileMap[mvpPlayerName].color : '#fbbf24';
-
         // LÓGICA DE VOTACIÓN + BARRA DE PROGRESO
         const votes = DB['VOTACIONES'] || [];
         const mvpName = cleanVal(lastMatch?.MVP); // FIX: el Excel usa '*' como vacío
@@ -586,7 +585,7 @@ function showView(view, param = null) {
                     if(playersInPos.length === 1) { if (pos.includes('L')) y = 75; else if (pos.includes('R')) y = 25; else y = 50; } 
                     else { y = 50 + ((idx - (playersInPos.length - 1) / 2) * 25); }
                     const isMvp = cleanVal(match.MVP) === p.Jugador;
-                    html += `<div class="player-pin flex flex-col items-center" style="left: ${x}%; top: ${y}%;" onclick="showView('playerProfile', '${p.Jugador}')"><div class="w-10 h-10 md:w-14 md:h-14 rounded-full ${teamNum === 1 ? 'bg-blue-500/20 border-blue-400' : 'bg-red-500/20 border-red-400'} border-2 flex items-center justify-center text-xs md:text-sm font-black text-white backdrop-blur" ${isMvp ? `style="border-color: ${mvpCol}; box-shadow: 0 0 0 4px ${mvpCol};"` : ''}>${pos}</div><span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white max-w-[60px] md:max-w-[100px] truncate block">${p.Jugador}</span></div>`;
+                        html += `<div class="player-pin flex flex-col items-center" style="left: ${x}%; top: ${y}%;" onclick="showView('playerProfile', '${p.Jugador}')"><div class="w-10 h-10 md:w-14 md:h-14 rounded-full ${teamNum === 1 ? 'bg-blue-500/20 border-blue-400' : 'bg-red-500/20 border-red-400'} border-2 flex items-center justify-center text-xs md:text-sm font-black text-white backdrop-blur" ${isMvp ? `style="border-color: ${mvpCol}; box-shadow: 0 0 0 4px ${mvpCol};"` : ''}>${pos}</div><span class="text-[8px] md:text-xs font-bold mt-1 bg-black/70 px-1 rounded text-white max-w-[60px] md:max-w-[100px] truncate block">${p.Jugador}</span></div>`;
                                 });
             }
             return html;
@@ -1542,10 +1541,10 @@ function submitLogout() {
 
 function openVoteModal(matchId) {
     const mvpSel = document.getElementById('vote-mvp');
-    if (!mvpSel || !mvpSel.value) {
+if (!mvpSel || !mvpSel.value) {
     showAlert('Falta el MVP', 'Elegí al MVP del partido antes de enviar tu voto.', 'error');
     return;
-    }
+}
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
 
     const modal = document.createElement('div');
@@ -1560,7 +1559,7 @@ function openVoteModal(matchId) {
             <div class="mb-4 text-left">
                 <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido <span class="text-red-400">*</span></label>
                 <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-red-500/60">
-                    <option value="" disabled selected>— Elegí al MVP (obligatorio) —</option>
+                   <option value="" disabled selected>— Elegí al MVP (obligatorio) —</option>
                     ${details.filter(d => d.Jugador !== currentUser).map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
                 </select>
             </div>
