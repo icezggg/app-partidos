@@ -1671,8 +1671,12 @@ async function submitAdminPass() {
 }
 
 async function previewVotesAdmin(matchId) {
+    if (!adminPassword) { showAlert('Sesión', 'Ingresá de nuevo la contraseña de admin.', 'error'); return; }
     try {
-        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'previewVotes', MatchID: matchId }) });
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'previewVotes', MatchID: matchId, Password: adminPassword })
+        });
         const data = await res.json();
         if (data.status === 'success') {
             adminVotePreview = data;
