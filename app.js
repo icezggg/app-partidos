@@ -1540,11 +1540,6 @@ function submitLogout() {
 }
 
 function openVoteModal(matchId) {
-    const mvpSel = document.getElementById('vote-mvp');
-if (!mvpSel || !mvpSel.value) {
-    showAlert('Falta el MVP', 'Elegí al MVP del partido antes de enviar tu voto.', 'error');
-    return;
-}
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
 
     const modal = document.createElement('div');
@@ -1559,7 +1554,7 @@ if (!mvpSel || !mvpSel.value) {
             <div class="mb-4 text-left">
                 <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido <span class="text-red-400">*</span></label>
                 <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-red-500/60">
-                   <option value="" disabled selected>— Elegí al MVP (obligatorio) —</option>
+                    <option value="" disabled selected>— Elegí al MVP (obligatorio) —</option>
                     ${details.filter(d => d.Jugador !== currentUser).map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
                 </select>
             </div>
@@ -1584,9 +1579,14 @@ if (!mvpSel || !mvpSel.value) {
     document.getElementById('vote-mvp').addEventListener('change', function() {
         if (this.value) { this.classList.remove('border-red-500/60'); this.classList.add('border-white/10'); }
     });
-} 
+}
 
 async function submitVote(matchId) {
+    const mvpSel = document.getElementById('vote-mvp');        // ← BARRERA 2
+    if (!mvpSel || !mvpSel.value) {                            // ← pegada a la
+        showAlert('Falta el MVP', 'Elegí al MVP del partido antes de enviar tu voto.', 'error');  // ← llave de
+        return;                                                // ← apertura
+    }     
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
     const mvp = document.getElementById('vote-mvp').value;
     
