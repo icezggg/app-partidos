@@ -1541,6 +1541,11 @@ function submitLogout() {
 }
 
 function openVoteModal(matchId) {
+    const mvpSel = document.getElementById('vote-mvp');
+    if (!mvpSel || !mvpSel.value) {
+    showAlert('Falta el MVP', 'Elegí al MVP del partido antes de enviar tu voto.', 'error');
+    return;
+    }
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
 
     const modal = document.createElement('div');
@@ -1553,8 +1558,9 @@ function openVoteModal(matchId) {
             <p class="text-gray-600 text-xs mb-6 italic">No podés votarte a vos mismo. Las notas van de 1 a 10 (saltando de 0.25 en 0.25).</p>
             
             <div class="mb-4 text-left">
-                <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido</label>
-                <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-white/10">
+                <label class="text-gray-300 text-sm font-bold block mb-2">MVP del Partido <span class="text-red-400">*</span></label>
+                <select id="vote-mvp" class="w-full bg-gray-900 text-white p-3 rounded-xl border border-red-500/60">
+                    <option value="" disabled selected>— Elegí al MVP (obligatorio) —</option>
                     ${details.filter(d => d.Jugador !== currentUser).map(d => `<option value="${d.Jugador}">${d.Jugador} (Eq ${d.Equipo})</option>`).join('')}
                 </select>
             </div>
@@ -1574,7 +1580,12 @@ function openVoteModal(matchId) {
         </div>
     `;
     document.body.appendChild(modal);
-}
+
+    // El borde rojo del select se va cuando eligen MVP
+    document.getElementById('vote-mvp').addEventListener('change', function() {
+        if (this.value) { this.classList.remove('border-red-500/60'); this.classList.add('border-white/10'); }
+    });
+} 
 
 async function submitVote(matchId) {
     const details = (DB['DETALLE_PARTIDO'] || []).filter(d => d.ID_Partido == matchId);
